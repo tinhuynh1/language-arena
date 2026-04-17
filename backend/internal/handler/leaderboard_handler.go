@@ -1,0 +1,50 @@
+package handler
+
+import (
+	"strconv"
+
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"github.com/michael/language-arena/backend/internal/service"
+	"github.com/michael/language-arena/backend/pkg/response"
+)
+
+type LeaderboardHandler struct {
+	leaderboardService *service.LeaderboardService
+}
+
+func NewLeaderboardHandler(leaderboardService *service.LeaderboardService) *LeaderboardHandler {
+	return &LeaderboardHandler{leaderboardService: leaderboardService}
+}
+
+func (h *LeaderboardHandler) GetLeaderboard(c *gin.Context) {
+	limitStr := c.DefaultQuery("limit", "20")
+	limit, _ := strconv.Atoi(limitStr)
+
+	entries, err := h.leaderboardService.GetTopPlayers(c.Request.Context(), limit)
+	if err != nil {
+		response.InternalError(c, "failed to fetch leaderboard")
+		return
+	}
+
+	response.OK(c, entries)
+}
+
+func (h *LeaderboardHandler) GetMyStats(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		response.Unauthorized(c, "not authenticated")
+		return
+	}
+
+	user, games, err := h.leaderboardService.GetPlayerStats(c.Request.Context(), userID.(uuid.UUID))
+	if err != nil {
+		response.InternalError(c, "failed to fetch stats")
+		return
+	}
+
+	response.OK(c, gin.H{
+		"user":         user,
+		"recent_games": games,
+	})
+}
