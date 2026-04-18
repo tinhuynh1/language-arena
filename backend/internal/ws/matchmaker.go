@@ -38,7 +38,7 @@ func (m *Matchmaker) Enqueue(client *Client, language, level string) {
 
 			vocabs := m.hub.GetVocabs(language, level, maxRounds+numTargets)
 
-			room := NewRoom(language, level, model.ModeDuel, vocabs)
+			room := NewRoom(language, level, model.ModeDuel, vocabs, m.hub)
 			room.AddPlayer(opponent)
 			room.AddPlayer(client)
 

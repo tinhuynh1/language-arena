@@ -13,11 +13,12 @@ import (
 )
 
 const (
-	maxRounds    = 10
-	roundTimeMs  = 5000
-	numTargets   = 4
-	countdownMs  = 3000
-	maxPlayers   = 100
+	maxRounds      = 10
+	roundTimeMs    = 5000
+	numTargets     = 4
+	countdownMs    = 3000
+	maxPlayers     = 100
+	graceMs        = 500
 )
 
 type RoomState int
@@ -46,18 +47,20 @@ type Room struct {
 	Mode     model.GameMode
 	State    RoomState
 	HostID   uuid.UUID
+	Hub      *Hub
 
 	Players map[*Client]*PlayerState
 
 	CurrentRound int
 	TotalRounds  int
-	RoundTimer   *time.Timer
-	Vocabs       []model.Vocabulary
+	RoundTimer    *time.Timer
+	RoundStartAt  time.Time
+	Vocabs        []model.Vocabulary
 
 	mu sync.Mutex
 }
 
-func NewRoom(language, level string, mode model.GameMode, vocabs []model.Vocabulary) *Room {
+func NewRoom(language, level string, mode model.GameMode, vocabs []model.Vocabulary, hub *Hub) *Room {
 	return &Room{
 		ID:          uuid.New().String()[:8],
 		Code:        generateRoomCode(),
@@ -68,6 +71,7 @@ func NewRoom(language, level string, mode model.GameMode, vocabs []model.Vocabul
 		TotalRounds: maxRounds,
 		Vocabs:      vocabs,
 		Players:     make(map[*Client]*PlayerState),
+		Hub:         hub,
 	}
 }
 
@@ -198,6 +202,10 @@ func (r *Room) nextRound() {
 
 	r.broadcast(WSMessage{Type: MsgRoundStart, Data: roundData})
 
+	r.mu.Lock()
+	r.RoundStartAt = time.Now()
+	r.mu.Unlock()
+
 	r.RoundTimer = time.AfterFunc(time.Duration(roundTimeMs)*time.Millisecond, func() {
 		r.mu.Lock()
 		if r.State == StatePlaying {
@@ -218,16 +226,20 @@ func (r *Room) nextRound() {
 func (r *Room) generateTargets(correct model.Vocabulary) []Target {
 	targets := make([]Target, 0, numTargets)
 
+	// Generate non-overlapping positions using grid zones
+	positions := generateSpreadPositions(numTargets)
+
 	targets = append(targets, Target{
 		ID:      correct.ID.String()[:8],
 		Word:    correct.Word,
 		Meaning: correct.Meaning,
-		X:       randomPosition(),
-		Y:       randomPosition(),
+		X:       positions[0][0],
+		Y:       positions[0][1],
 		Correct: true,
 	})
 
 	used := map[string]bool{correct.Word: true}
+	posIdx := 1
 	for i := 0; i < numTargets-1; i++ {
 		for attempts := 0; attempts < 20; attempts++ {
 			idx := rand.Intn(len(r.Vocabs))
@@ -238,10 +250,11 @@ func (r *Room) generateTargets(correct model.Vocabulary) []Target {
 					ID:      v.ID.String()[:8],
 					Word:    v.Word,
 					Meaning: v.Meaning,
-					X:       randomPosition(),
-					Y:       randomPosition(),
+					X:       positions[posIdx][0],
+					Y:       positions[posIdx][1],
 					Correct: false,
 				})
+				posIdx++
 				break
 			}
 		}
@@ -258,7 +271,15 @@ func (r *Room) HandleHit(client *Client, data TargetHitData) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if r.State != StatePlaying {
+	// Accept clicks during playing OR within grace period after round end
+	if r.State == StateRoundEnd {
+		elapsed := time.Since(r.RoundStartAt).Milliseconds()
+		if elapsed > int64(roundTimeMs+graceMs) {
+			log.Printf("[SCORE] %s | Round %d | ⏰ Too late (elapsed=%dms, grace expired)", client.Username, r.CurrentRound, elapsed)
+			return
+		}
+		log.Printf("[SCORE] %s | Round %d | ⏳ Grace period accepted (elapsed=%dms)", client.Username, r.CurrentRound, elapsed)
+	} else if r.State != StatePlaying {
 		return
 	}
 
@@ -278,11 +299,16 @@ func (r *Room) HandleHit(client *Client, data TargetHitData) {
 		points := calculateScore(data.ReactionMs)
 		ps.Score += points
 		ps.Reactions = append(ps.Reactions, data.ReactionMs)
+		log.Printf("[SCORE] %s | Round %d | ✅ Correct | reaction=%dms | +%d points | total=%d",
+			client.Username, r.CurrentRound, data.ReactionMs, points, ps.Score)
 	} else {
+		before := ps.Score
 		ps.Score -= 50
 		if ps.Score < 0 {
 			ps.Score = 0
 		}
+		log.Printf("[SCORE] %s | Round %d | ❌ Wrong | -%d points | total=%d",
+			client.Username, r.CurrentRound, before-ps.Score, ps.Score)
 	}
 
 	// Send personal score update to the player
@@ -409,6 +435,11 @@ func (r *Room) finishGame() {
 
 	log.Printf("Game %s finished. Mode: %s, Winner: %s, Players: %d",
 		r.ID, r.Mode, winner, len(r.Players))
+
+	// Persist results to database
+	if r.Hub != nil {
+		go r.Hub.SaveGameResults(r, ranking)
+	}
 }
 
 func (r *Room) getRanking() []LeaderboardPlayerData {
@@ -520,8 +551,36 @@ func calculateScore(reactionMs int) int {
 	return bonus
 }
 
-func randomPosition() float64 {
-	return 10 + rand.Float64()*80
+// generateSpreadPositions creates non-overlapping positions by dividing the
+// play area into a strict 2x3 grid. Each cell is guaranteed to have no overlap.
+// Y values start from 15% to avoid the HUD area. Positions are in percentages.
+func generateSpreadPositions(count int) [][2]float64 {
+	// Strict 2x3 grid — no zone overlap possible
+	// Format: {minX, maxX, minY, maxY}
+	zones := [][4]float64{
+		{5, 45, 10, 35},   // top-left
+		{55, 95, 10, 35},  // top-right
+		{5, 45, 40, 65},   // mid-left
+		{55, 95, 40, 65},  // mid-right
+		{5, 45, 70, 95},   // bottom-left
+		{55, 95, 70, 95},  // bottom-right
+	}
+
+	rand.Shuffle(len(zones), func(i, j int) {
+		zones[i], zones[j] = zones[j], zones[i]
+	})
+
+	positions := make([][2]float64, count)
+	for i := 0; i < count; i++ {
+		z := zones[i%len(zones)]
+		// Place in center of zone with small random offset (±10%)
+		cx := (z[0] + z[1]) / 2
+		cy := (z[2] + z[3]) / 2
+		offsetX := (rand.Float64() - 0.5) * (z[1] - z[0]) * 0.4
+		offsetY := (rand.Float64() - 0.5) * (z[3] - z[2]) * 0.4
+		positions[i] = [2]float64{cx + offsetX, cy + offsetY}
+	}
+	return positions
 }
 
 func avgReaction(reactions []int) int {

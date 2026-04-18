@@ -23,7 +23,37 @@ INSERT INTO vocabularies (word, meaning, language, level, difficulty, category) 
 ('Beautiful', 'Đẹp', 'en', 'A1', 1, 'adjective'),
 ('Big', 'To, lớn', 'en', 'A1', 1, 'adjective'),
 ('Small', 'Nhỏ', 'en', 'A1', 1, 'adjective'),
-('Money', 'Tiền', 'en', 'A1', 1, 'object');
+('Money', 'Tiền', 'en', 'A1', 1, 'object'),
+('Cat', 'Con mèo', 'en', 'A1', 1, 'animal'),
+('Dog', 'Con chó', 'en', 'A1', 1, 'animal'),
+('Fish', 'Con cá', 'en', 'A1', 1, 'animal'),
+('Bird', 'Con chim', 'en', 'A1', 1, 'animal'),
+('Red', 'Màu đỏ', 'en', 'A1', 1, 'color'),
+('Blue', 'Màu xanh dương', 'en', 'A1', 1, 'color'),
+('Green', 'Màu xanh lá', 'en', 'A1', 1, 'color'),
+('Yellow', 'Màu vàng', 'en', 'A1', 1, 'color'),
+('White', 'Màu trắng', 'en', 'A1', 1, 'color'),
+('Black', 'Màu đen', 'en', 'A1', 1, 'color'),
+('Mother', 'Mẹ', 'en', 'A1', 1, 'people'),
+('Father', 'Bố', 'en', 'A1', 1, 'people'),
+('Brother', 'Anh/em trai', 'en', 'A1', 1, 'people'),
+('Sister', 'Chị/em gái', 'en', 'A1', 1, 'people'),
+('Doctor', 'Bác sĩ', 'en', 'A1', 1, 'people'),
+('Car', 'Xe hơi', 'en', 'A1', 1, 'object'),
+('Phone', 'Điện thoại', 'en', 'A1', 1, 'object'),
+('Table', 'Cái bàn', 'en', 'A1', 1, 'object'),
+('Chair', 'Cái ghế', 'en', 'A1', 1, 'object'),
+('Door', 'Cánh cửa', 'en', 'A1', 1, 'object'),
+('Window', 'Cửa sổ', 'en', 'A1', 1, 'object'),
+('Eat', 'Ăn', 'en', 'A1', 1, 'action'),
+('Drink', 'Uống', 'en', 'A1', 1, 'action'),
+('Run', 'Chạy', 'en', 'A1', 1, 'action'),
+('Walk', 'Đi bộ', 'en', 'A1', 1, 'action'),
+('Sleep', 'Ngủ', 'en', 'A1', 1, 'action'),
+('Rain', 'Mưa', 'en', 'A1', 1, 'weather'),
+('Sun', 'Mặt trời', 'en', 'A1', 1, 'weather'),
+('Cold', 'Lạnh', 'en', 'A1', 1, 'adjective'),
+('Hot', 'Nóng', 'en', 'A1', 1, 'adjective');
 
 -- English A2 (Elementary)
 INSERT INTO vocabularies (word, meaning, language, level, difficulty, category) VALUES
@@ -46,7 +76,27 @@ INSERT INTO vocabularies (word, meaning, language, level, difficulty, category) 
 ('Advantage', 'Lợi thế', 'en', 'A2', 1, 'abstract'),
 ('Polite', 'Lịch sự', 'en', 'A2', 1, 'adjective'),
 ('Honest', 'Trung thực', 'en', 'A2', 1, 'adjective'),
-('Nervous', 'Lo lắng', 'en', 'A2', 1, 'emotion');
+('Nervous', 'Lo lắng', 'en', 'A2', 1, 'emotion'),
+('Airport', 'Sân bay', 'en', 'A2', 1, 'place'),
+('Passport', 'Hộ chiếu', 'en', 'A2', 1, 'object'),
+('Luggage', 'Hành lý', 'en', 'A2', 1, 'object'),
+('Ticket', 'Vé', 'en', 'A2', 1, 'object'),
+('Journey', 'Hành trình', 'en', 'A2', 1, 'travel'),
+('Customer', 'Khách hàng', 'en', 'A2', 1, 'business'),
+('Interview', 'Phỏng vấn', 'en', 'A2', 1, 'business'),
+('Salary', 'Lương', 'en', 'A2', 1, 'business'),
+('Recipe', 'Công thức nấu ăn', 'en', 'A2', 1, 'food'),
+('Delicious', 'Ngon', 'en', 'A2', 1, 'adjective'),
+('Healthy', 'Khỏe mạnh', 'en', 'A2', 1, 'adjective'),
+('Exercise', 'Tập thể dục', 'en', 'A2', 1, 'action'),
+('Accident', 'Tai nạn', 'en', 'A2', 1, 'daily'),
+('Emergency', 'Khẩn cấp', 'en', 'A2', 1, 'daily'),
+('Disappointed', 'Thất vọng', 'en', 'A2', 1, 'emotion'),
+('Excited', 'Hào hứng', 'en', 'A2', 1, 'emotion'),
+('Worried', 'Lo lắng', 'en', 'A2', 1, 'emotion'),
+('Generous', 'Hào phóng', 'en', 'A2', 1, 'adjective'),
+('Lazy', 'Lười biếng', 'en', 'A2', 1, 'adjective'),
+('Responsible', 'Có trách nhiệm', 'en', 'A2', 1, 'adjective');
 
 -- English B1 (Intermediate)
 INSERT INTO vocabularies (word, meaning, language, level, difficulty, category) VALUES
@@ -69,7 +119,21 @@ INSERT INTO vocabularies (word, meaning, language, level, difficulty, category) 
 ('Comparison', 'Sự so sánh', 'en', 'B1', 2, 'abstract'),
 ('Tradition', 'Truyền thống', 'en', 'B1', 2, 'culture'),
 ('Reputation', 'Danh tiếng', 'en', 'B1', 2, 'abstract'),
-('Curriculum', 'Chương trình giảng dạy', 'en', 'B1', 2, 'education');
+('Curriculum', 'Chương trình giảng dạy', 'en', 'B1', 2, 'education'),
+('Manufacture', 'Sản xuất', 'en', 'B1', 2, 'business'),
+('Advertisement', 'Quảng cáo', 'en', 'B1', 2, 'business'),
+('Competition', 'Cuộc thi', 'en', 'B1', 2, 'abstract'),
+('Volunteer', 'Tình nguyện viên', 'en', 'B1', 2, 'people'),
+('Colleague', 'Đồng nghiệp', 'en', 'B1', 2, 'people'),
+('Accurate', 'Chính xác', 'en', 'B1', 2, 'adjective'),
+('Efficient', 'Hiệu quả', 'en', 'B1', 2, 'adjective'),
+('Enthusiasm', 'Sự nhiệt tình', 'en', 'B1', 2, 'emotion'),
+('Agriculture', 'Nông nghiệp', 'en', 'B1', 2, 'nature'),
+('Pollution', 'Ô nhiễm', 'en', 'B1', 2, 'nature'),
+('Earthquake', 'Động đất', 'en', 'B1', 2, 'nature'),
+('Forecast', 'Dự báo', 'en', 'B1', 2, 'nature'),
+('Recommend', 'Đề xuất', 'en', 'B1', 2, 'action'),
+('Guarantee', 'Đảm bảo', 'en', 'B1', 2, 'action');
 
 -- English B2 (Upper Intermediate)
 INSERT INTO vocabularies (word, meaning, language, level, difficulty, category) VALUES
@@ -92,7 +156,22 @@ INSERT INTO vocabularies (word, meaning, language, level, difficulty, category) 
 ('Vulnerability', 'Tính dễ bị tổn thương', 'en', 'B2', 3, 'abstract'),
 ('Jurisdiction', 'Quyền tài phán', 'en', 'B2', 3, 'law'),
 ('Stakeholder', 'Bên liên quan', 'en', 'B2', 3, 'business'),
-('Consolidate', 'Củng cố', 'en', 'B2', 3, 'action');
+('Consolidate', 'Củng cố', 'en', 'B2', 3, 'action'),
+('Dilemma', 'Tình thế tiến thoái lưỡng nan', 'en', 'B2', 3, 'abstract'),
+('Empathy', 'Sự đồng cảm', 'en', 'B2', 3, 'emotion'),
+('Metaphor', 'Phép ẩn dụ', 'en', 'B2', 3, 'language'),
+('Inevitable', 'Không thể tránh khỏi', 'en', 'B2', 3, 'adjective'),
+('Sophisticated', 'Tinh vi, phức tạp', 'en', 'B2', 3, 'adjective'),
+('Prosperity', 'Sự thịnh vượng', 'en', 'B2', 3, 'abstract'),
+('Resilience', 'Sự kiên cường', 'en', 'B2', 3, 'abstract'),
+('Discrimination', 'Phân biệt đối xử', 'en', 'B2', 3, 'society'),
+('Entrepreneur', 'Doanh nhân', 'en', 'B2', 3, 'business'),
+('Innovation', 'Đổi mới sáng tạo', 'en', 'B2', 3, 'business'),
+('Diplomacy', 'Ngoại giao', 'en', 'B2', 3, 'politics'),
+('Propaganda', 'Tuyên truyền', 'en', 'B2', 3, 'politics'),
+('Testimony', 'Lời khai', 'en', 'B2', 3, 'law'),
+('Algorithm', 'Thuật toán', 'en', 'B2', 3, 'technology'),
+('Encryption', 'Mã hóa', 'en', 'B2', 3, 'technology');
 
 -- Chinese HSK1 (Basic)
 INSERT INTO vocabularies (word, meaning, language, level, difficulty, category) VALUES
@@ -115,7 +194,25 @@ INSERT INTO vocabularies (word, meaning, language, level, difficulty, category) 
 ('医院', 'Bệnh viện', 'zh', 'HSK1', 1, 'place'),
 ('电脑', 'Máy tính', 'zh', 'HSK1', 1, 'object'),
 ('工作', 'Công việc', 'zh', 'HSK1', 1, 'daily'),
-('今天', 'Hôm nay', 'zh', 'HSK1', 1, 'time');
+('今天', 'Hôm nay', 'zh', 'HSK1', 1, 'time'),
+('猫', 'Con mèo', 'zh', 'HSK1', 1, 'animal'),
+('狗', 'Con chó', 'zh', 'HSK1', 1, 'animal'),
+('米饭', 'Cơm', 'zh', 'HSK1', 1, 'food'),
+('茶', 'Trà', 'zh', 'HSK1', 1, 'food'),
+('苹果', 'Quả táo', 'zh', 'HSK1', 1, 'food'),
+('妈妈', 'Mẹ', 'zh', 'HSK1', 1, 'people'),
+('爸爸', 'Bố', 'zh', 'HSK1', 1, 'people'),
+('哥哥', 'Anh trai', 'zh', 'HSK1', 1, 'people'),
+('姐姐', 'Chị gái', 'zh', 'HSK1', 1, 'people'),
+('飞机', 'Máy bay', 'zh', 'HSK1', 1, 'object'),
+('出租车', 'Taxi', 'zh', 'HSK1', 1, 'object'),
+('下雨', 'Mưa', 'zh', 'HSK1', 1, 'weather'),
+('天气', 'Thời tiết', 'zh', 'HSK1', 1, 'weather'),
+('漂亮', 'Đẹp', 'zh', 'HSK1', 1, 'adjective'),
+('快', 'Nhanh', 'zh', 'HSK1', 1, 'adjective'),
+('慢', 'Chậm', 'zh', 'HSK1', 1, 'adjective'),
+('冷', 'Lạnh', 'zh', 'HSK1', 1, 'adjective'),
+('热', 'Nóng', 'zh', 'HSK1', 1, 'adjective');
 
 -- Chinese HSK2 (Elementary)
 INSERT INTO vocabularies (word, meaning, language, level, difficulty, category) VALUES
@@ -138,7 +235,22 @@ INSERT INTO vocabularies (word, meaning, language, level, difficulty, category) 
 ('复杂', 'Phức tạp', 'zh', 'HSK2', 2, 'adjective'),
 ('聪明', 'Thông minh', 'zh', 'HSK2', 1, 'adjective'),
 ('努力', 'Nỗ lực', 'zh', 'HSK2', 1, 'adjective'),
-('方便', 'Thuận tiện', 'zh', 'HSK2', 1, 'adjective');
+('方便', 'Thuận tiện', 'zh', 'HSK2', 1, 'adjective'),
+('安全', 'An toàn', 'zh', 'HSK2', 1, 'adjective'),
+('着急', 'Nóng lòng', 'zh', 'HSK2', 1, 'emotion'),
+('担心', 'Lo lắng', 'zh', 'HSK2', 1, 'emotion'),
+('满意', 'Hài lòng', 'zh', 'HSK2', 1, 'emotion'),
+('超市', 'Siêu thị', 'zh', 'HSK2', 1, 'place'),
+('银行', 'Ngân hàng', 'zh', 'HSK2', 1, 'place'),
+('护照', 'Hộ chiếu', 'zh', 'HSK2', 1, 'object'),
+('行李', 'Hành lý', 'zh', 'HSK2', 1, 'object'),
+('地铁', 'Tàu điện ngầm', 'zh', 'HSK2', 1, 'object'),
+('邻居', 'Hàng xóm', 'zh', 'HSK2', 1, 'people'),
+('同事', 'Đồng nghiệp', 'zh', 'HSK2', 1, 'people'),
+('客人', 'Khách mời', 'zh', 'HSK2', 1, 'people'),
+('礼物', 'Quà tặng', 'zh', 'HSK2', 1, 'object'),
+('季节', 'Mùa', 'zh', 'HSK2', 1, 'time'),
+('春天', 'Mùa xuân', 'zh', 'HSK2', 1, 'time');
 
 -- Chinese HSK3 (Intermediate)
 INSERT INTO vocabularies (word, meaning, language, level, difficulty, category) VALUES
@@ -161,4 +273,19 @@ INSERT INTO vocabularies (word, meaning, language, level, difficulty, category) 
 ('印象', 'Ấn tượng', 'zh', 'HSK3', 2, 'abstract'),
 ('建议', 'Đề nghị, gợi ý', 'zh', 'HSK3', 2, 'action'),
 ('发展', 'Phát triển', 'zh', 'HSK3', 2, 'abstract'),
-('政策', 'Chính sách', 'zh', 'HSK3', 2, 'politics');
+('政策', 'Chính sách', 'zh', 'HSK3', 2, 'politics'),
+('收入', 'Thu nhập', 'zh', 'HSK3', 2, 'business'),
+('消费', 'Tiêu dùng', 'zh', 'HSK3', 2, 'business'),
+('广告', 'Quảng cáo', 'zh', 'HSK3', 2, 'business'),
+('节约', 'Tiết kiệm', 'zh', 'HSK3', 2, 'action'),
+('污染', 'Ô nhiễm', 'zh', 'HSK3', 2, 'nature'),
+('保护', 'Bảo vệ', 'zh', 'HSK3', 2, 'action'),
+('温度', 'Nhiệt độ', 'zh', 'HSK3', 2, 'nature'),
+('地震', 'Động đất', 'zh', 'HSK3', 2, 'nature'),
+('教育', 'Giáo dục', 'zh', 'HSK3', 2, 'education'),
+('毕业', 'Tốt nghiệp', 'zh', 'HSK3', 2, 'education'),
+('奖学金', 'Học bổng', 'zh', 'HSK3', 2, 'education'),
+('失败', 'Thất bại', 'zh', 'HSK3', 2, 'abstract'),
+('成功', 'Thành công', 'zh', 'HSK3', 2, 'abstract'),
+('勇敢', 'Dũng cảm', 'zh', 'HSK3', 2, 'adjective'),
+('骄傲', 'Tự hào', 'zh', 'HSK3', 2, 'emotion');

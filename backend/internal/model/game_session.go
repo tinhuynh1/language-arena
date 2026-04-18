@@ -18,10 +18,6 @@ type GameSession struct {
 	ID            uuid.UUID  `json:"id" db:"id"`
 	Mode          GameMode   `json:"mode" db:"mode"`
 	Language      string     `json:"language" db:"language"`
-	Player1ID     uuid.UUID  `json:"player1_id" db:"player1_id"`
-	Player2ID     *uuid.UUID `json:"player2_id,omitempty" db:"player2_id"`
-	Player1Score  int        `json:"player1_score" db:"player1_score"`
-	Player2Score  int        `json:"player2_score" db:"player2_score"`
 	WinnerID      *uuid.UUID `json:"winner_id,omitempty" db:"winner_id"`
 	Rounds        int        `json:"rounds" db:"rounds"`
 	AvgReactionMs int        `json:"avg_reaction_ms" db:"avg_reaction_ms"`
@@ -36,4 +32,15 @@ type LeaderboardEntry struct {
 	TotalScore     int64     `json:"total_score"`
 	GamesPlayed    int       `json:"games_played"`
 	BestReactionMs int       `json:"best_reaction_ms"`
+}
+
+type GameSessionPlayer struct {
+	ID             uuid.UUID `json:"id" db:"id"`
+	SessionID      uuid.UUID `json:"session_id" db:"session_id"`
+	UserID         uuid.UUID `json:"user_id" db:"user_id"`
+	Score          int       `json:"score" db:"score"`
+	AvgReactionMs  int       `json:"avg_reaction_ms" db:"avg_reaction_ms"`
+	BestReactionMs int       `json:"best_reaction_ms" db:"best_reaction_ms"`
+	Rank           int       `json:"rank" db:"rank"`
+	CreatedAt      time.Time `json:"created_at" db:"created_at"`
 }

@@ -55,7 +55,7 @@ func main() {
 	vocabService := service.NewVocabService(vocabRepo)
 	leaderboardService := service.NewLeaderboardService(userRepo, gameRepo)
 
-	hub := ws.NewHub(vocabService)
+	hub := ws.NewHub(vocabService, gameRepo, userRepo)
 	go hub.Run()
 
 	authHandler := handler.NewAuthHandler(authService)
@@ -168,10 +168,6 @@ func runMigrations(db *sql.DB) error {
 			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 			mode VARCHAR(10) NOT NULL CHECK (mode IN ('solo', 'duel', 'battle')),
 			language VARCHAR(5) NOT NULL,
-			player1_id UUID NOT NULL REFERENCES users(id),
-			player2_id UUID REFERENCES users(id),
-			player1_score INT DEFAULT 0,
-			player2_score INT DEFAULT 0,
 			winner_id UUID REFERENCES users(id),
 			rounds INT DEFAULT 10,
 			avg_reaction_ms INT DEFAULT 0,
@@ -182,6 +178,30 @@ func runMigrations(db *sql.DB) error {
 		`DO $$ BEGIN
 			ALTER TABLE vocabularies ADD COLUMN IF NOT EXISTS level VARCHAR(10) NOT NULL DEFAULT 'A1';
 		EXCEPTION WHEN duplicate_column THEN NULL;
+		END $$`,
+		`CREATE TABLE IF NOT EXISTS game_session_players (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			session_id UUID NOT NULL REFERENCES game_sessions(id) ON DELETE CASCADE,
+			user_id UUID NOT NULL REFERENCES users(id),
+			score INT DEFAULT 0,
+			avg_reaction_ms INT DEFAULT 0,
+			best_reaction_ms INT DEFAULT 0,
+			rank INT DEFAULT 0,
+			created_at TIMESTAMPTZ DEFAULT NOW()
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_gsp_session ON game_session_players(session_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_gsp_user ON game_session_players(user_id)`,
+		// Drop redundant player columns from game_sessions (now in game_session_players)
+		`DO $$ BEGIN
+			ALTER TABLE game_sessions DROP COLUMN IF EXISTS player1_id;
+			ALTER TABLE game_sessions DROP COLUMN IF EXISTS player2_id;
+			ALTER TABLE game_sessions DROP COLUMN IF EXISTS player1_score;
+			ALTER TABLE game_sessions DROP COLUMN IF EXISTS player2_score;
+		END $$`,
+		// Fix CHECK constraint to include 'battle' mode
+		`DO $$ BEGIN
+			ALTER TABLE game_sessions DROP CONSTRAINT IF EXISTS game_sessions_mode_check;
+			ALTER TABLE game_sessions ADD CONSTRAINT game_sessions_mode_check CHECK (mode IN ('solo', 'duel', 'battle'));
 		END $$`,
 	}
 

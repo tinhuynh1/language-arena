@@ -32,6 +32,7 @@ export default function PlayPage() {
   const [selectedLevel, setSelectedLevel] = useState<string>('A1');
   const [joinCode, setJoinCode] = useState('');
   const [showJoinInput, setShowJoinInput] = useState(false);
+  const [readySent, setReadySent] = useState(false);
 
   if (!user) {
     router.push('/login');
@@ -61,10 +62,12 @@ export default function PlayPage() {
 
   const handleReady = useCallback(() => {
     game.ready();
+    setReadySent(true);
   }, [game]);
 
   const handlePlayAgain = () => {
     game.leaveGame();
+    setReadySent(false);
     setTimeout(() => {
       if (selectedMode === 'battle') {
         game.createRoom(selectedLang, selectedLevel);
@@ -81,20 +84,20 @@ export default function PlayPage() {
   // Idle - Mode/Lang/Level Selection
   if (game.state === 'idle') {
     return (
-      <div className="min-h-screen flex items-center justify-center px-6">
+      <div className="min-h-screen flex items-center justify-center px-4 sm:px-6">
         <div className="w-full max-w-2xl text-center">
-          <h1 className="font-heading font-bold text-4xl mb-2 uppercase tracking-wider">
+          <h1 className="font-heading font-bold text-2xl sm:text-4xl mb-2 uppercase tracking-wider">
             Select <span style={{ color: '#00ff88' }}>Mission</span>
           </h1>
-          <p className="text-[var(--color-text-muted)] mb-8 text-sm">Choose mode, language, and level</p>
+          <p className="text-[var(--color-text-muted)] mb-6 sm:mb-8 text-xs sm:text-sm">Choose mode, language, and level</p>
 
           {/* Mode Selection */}
-          <div className="grid grid-cols-3 gap-3 mb-6">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4 sm:mb-6">
             <button
               onClick={() => setSelectedMode('solo')}
               className={`card text-left transition-all ${selectedMode === 'solo' ? 'border-[var(--color-accent-neon)]' : ''}`}
             >
-              <div className="font-heading font-bold text-lg mb-1 uppercase" style={{ color: selectedMode === 'solo' ? '#00ff88' : 'inherit' }}>
+              <div className="font-heading font-bold text-sm sm:text-lg mb-1 uppercase" style={{ color: selectedMode === 'solo' ? '#00ff88' : 'inherit' }}>
                 Solo
               </div>
               <p className="text-xs text-[var(--color-text-muted)]">Practice alone</p>
@@ -103,7 +106,7 @@ export default function PlayPage() {
               onClick={() => setSelectedMode('duel')}
               className={`card text-left transition-all ${selectedMode === 'duel' ? 'border-[var(--color-accent-orange)]' : ''}`}
             >
-              <div className="font-heading font-bold text-lg mb-1 uppercase" style={{ color: selectedMode === 'duel' ? '#ff6b35' : 'inherit' }}>
+              <div className="font-heading font-bold text-sm sm:text-lg mb-1 uppercase" style={{ color: selectedMode === 'duel' ? '#ff6b35' : 'inherit' }}>
                 1v1 Duel
               </div>
               <p className="text-xs text-[var(--color-text-muted)]">Real-time match</p>
@@ -112,7 +115,7 @@ export default function PlayPage() {
               onClick={() => setSelectedMode('battle')}
               className={`card text-left transition-all ${selectedMode === 'battle' ? 'border-[var(--color-accent-cyan)]' : ''}`}
             >
-              <div className="font-heading font-bold text-lg mb-1 uppercase" style={{ color: selectedMode === 'battle' ? '#00d4ff' : 'inherit' }}>
+              <div className="font-heading font-bold text-sm sm:text-lg mb-1 uppercase" style={{ color: selectedMode === 'battle' ? '#00d4ff' : 'inherit' }}>
                 Battle
               </div>
               <p className="text-xs text-[var(--color-text-muted)]">Up to 100 players</p>
@@ -120,7 +123,7 @@ export default function PlayPage() {
           </div>
 
           {/* Language Selection */}
-          <div className="grid grid-cols-2 gap-3 mb-6">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-4 sm:mb-6">
             <button
               onClick={() => handleLangChange('en')}
               className={`card text-center transition-all ${selectedLang === 'en' ? 'border-[var(--color-accent-cyan)]' : ''}`}
@@ -167,7 +170,7 @@ export default function PlayPage() {
 
           {/* Action Buttons */}
           <div className="space-y-3">
-            <button onClick={handleStart} className="btn-primary text-lg px-12 py-4 w-full max-w-xs mx-auto block">
+            <button onClick={handleStart} className="btn-primary text-base sm:text-lg px-8 sm:px-12 py-3 sm:py-4 w-full max-w-xs mx-auto block">
               {selectedMode === 'battle' ? 'CREATE ROOM' : selectedMode === 'duel' ? 'FIND OPPONENT' : 'START TRAINING'}
             </button>
 
@@ -228,7 +231,7 @@ export default function PlayPage() {
     return (
       <div className="min-h-screen flex items-center justify-center px-6">
         <div className="w-full max-w-md text-center">
-          <div className="font-heading font-bold text-3xl mb-2 uppercase" style={{ color: '#00d4ff' }}>
+          <div className="font-heading font-bold text-2xl sm:text-3xl mb-2 uppercase" style={{ color: '#00d4ff' }}>
             BATTLE ROOM
           </div>
 
@@ -238,7 +241,7 @@ export default function PlayPage() {
               Share this code with friends
             </div>
             <div
-              className="font-mono font-bold text-5xl tracking-[0.3em] text-glow cursor-pointer"
+              className="font-mono font-bold text-3xl sm:text-5xl tracking-[0.2em] sm:tracking-[0.3em] text-glow cursor-pointer"
               style={{ color: '#00ff88' }}
               onClick={() => navigator.clipboard?.writeText(game.roomCode)}
               title="Click to copy"
@@ -304,9 +307,23 @@ export default function PlayPage() {
               {game.playerCount} players
             </div>
           )}
-          <button onClick={handleReady} className="btn-primary text-lg px-12 py-4">
-            READY
+          <button
+            onClick={handleReady}
+            disabled={readySent}
+            className={`text-lg px-12 py-4 font-heading font-bold uppercase tracking-wider border-2 transition-all ${
+              readySent
+                ? 'border-[var(--color-accent-neon)] text-[var(--color-accent-neon)] bg-[rgba(0,255,136,0.1)] opacity-80 cursor-not-allowed'
+                : 'btn-primary'
+            }`}
+            style={{ borderRadius: '2px' }}
+          >
+            {readySent ? '✓ WAITING...' : 'READY'}
           </button>
+          {readySent && (
+            <p className="text-sm text-[var(--color-text-muted)] mt-3 animate-pulse">
+              Waiting for opponent to be ready...
+            </p>
+          )}
         </div>
       </div>
     );
@@ -320,7 +337,7 @@ export default function PlayPage() {
   // Playing
   if (game.state === 'playing' || game.state === 'round_end') {
     return (
-      <div className="h-[calc(100vh-4rem)] relative" style={{ background: 'var(--color-bg-primary)' }}>
+      <div className="h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] relative" style={{ background: 'var(--color-bg-primary)' }}>
         <GameCanvas
           targets={game.targets}
           question={game.question}

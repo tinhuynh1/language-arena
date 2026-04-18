@@ -36,7 +36,9 @@ export default function GameOverScreen({ data, mode, username, onPlayAgain, onLe
     if (mode === 'solo') return 'MISSION COMPLETE';
     if (mode === 'battle') {
       if (myRank === 1) return '🏆 CHAMPION';
-      if (myRank <= 3) return '🥇 TOP 3!';
+      if (myRank === 2) return '🥈 RUNNER UP';
+      if (myRank === 3) return '🥉 THIRD PLACE';
+      if (myRank <= 10) return '🔥 TOP 10!';
       return 'BATTLE OVER';
     }
     if (isWinner) return 'VICTORY';
@@ -46,7 +48,12 @@ export default function GameOverScreen({ data, mode, username, onPlayAgain, onLe
 
   const titleColor = () => {
     if (mode === 'solo') return '#00ff88';
-    if (mode === 'battle') return myRank <= 3 ? '#ffd700' : '#00d4ff';
+    if (mode === 'battle') {
+      if (myRank === 1) return '#ffd700'; // Gold
+      if (myRank === 2) return '#c0c0c0'; // Silver
+      if (myRank === 3) return '#cd7f32'; // Bronze
+      return '#00d4ff';
+    }
     return isWinner ? '#00ff88' : '#ff3548';
   };
 

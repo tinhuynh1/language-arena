@@ -6,7 +6,9 @@ import (
 	"log"
 	"sync"
 
+	"github.com/google/uuid"
 	"github.com/michael/language-arena/backend/internal/model"
+	"github.com/michael/language-arena/backend/internal/repository"
 	"github.com/michael/language-arena/backend/internal/service"
 )
 
@@ -19,11 +21,13 @@ type Hub struct {
 	Matchmaker *Matchmaker
 
 	vocabService *service.VocabService
+	gameRepo     *repository.GameRepository
+	userRepo     *repository.UserRepository
 
 	mu sync.RWMutex
 }
 
-func NewHub(vocabService *service.VocabService) *Hub {
+func NewHub(vocabService *service.VocabService, gameRepo *repository.GameRepository, userRepo *repository.UserRepository) *Hub {
 	h := &Hub{
 		Clients:      make(map[*Client]bool),
 		Register:     make(chan *Client),
@@ -31,6 +35,8 @@ func NewHub(vocabService *service.VocabService) *Hub {
 		Rooms:        make(map[string]*Room),
 		RoomByCode:   make(map[string]*Room),
 		vocabService: vocabService,
+		gameRepo:     gameRepo,
+		userRepo:     userRepo,
 	}
 	h.Matchmaker = NewMatchmaker(h)
 	return h
@@ -105,7 +111,7 @@ func (h *Hub) handleJoinQueue(client *Client, msg WSMessage) {
 
 	if data.Mode == "solo" {
 		vocabs := h.GetVocabs(data.Language, data.Level, maxRounds+numTargets)
-		room := NewRoom(data.Language, data.Level, model.ModeSolo, vocabs)
+		room := NewRoom(data.Language, data.Level, model.ModeSolo, vocabs, h)
 		room.AddPlayer(client)
 		h.AddRoom(room)
 
@@ -140,7 +146,7 @@ func (h *Hub) handleCreateRoom(client *Client, msg WSMessage) {
 	}
 
 	vocabs := h.GetVocabs(data.Language, data.Level, maxRounds+numTargets)
-	room := NewRoom(data.Language, data.Level, model.ModeBattle, vocabs)
+	room := NewRoom(data.Language, data.Level, model.ModeBattle, vocabs, h)
 	room.HostID = client.ID
 	room.AddPlayer(client)
 	h.AddRoom(room)
@@ -278,4 +284,102 @@ func (h *Hub) GetOnlineCount() int {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	return len(h.Clients)
+}
+
+func (h *Hub) SaveGameResults(room *Room, ranking []LeaderboardPlayerData) {
+	if h.gameRepo == nil || h.userRepo == nil {
+		return
+	}
+
+	ctx := context.Background()
+
+	// Collect player info
+	players := make([]*PlayerState, 0, len(room.Players))
+	for _, ps := range room.Players {
+		players = append(players, ps)
+	}
+
+	// Create game session (session-level data only)
+	session := &model.GameSession{
+		Mode:     room.Mode,
+		Language: room.Language,
+		Rounds:   room.TotalRounds,
+	}
+
+	if err := h.gameRepo.Create(ctx, session); err != nil {
+		log.Printf("Failed to create game session: %v", err)
+		return
+	}
+
+	// Determine winner
+	var winnerID *uuid.UUID
+	if len(ranking) > 0 && ranking[0].Score > 0 {
+		for _, ps := range players {
+			if ps.Client.Username == ranking[0].Username {
+				id := ps.Client.ID
+				winnerID = &id
+				break
+			}
+		}
+	}
+
+	// Calculate avg reaction across all players
+	totalReaction := 0
+	totalCount := 0
+	for _, ps := range players {
+		for _, r := range ps.Reactions {
+			totalReaction += r
+			totalCount++
+		}
+	}
+	avgReaction := 0
+	if totalCount > 0 {
+		avgReaction = totalReaction / totalCount
+	}
+
+	if err := h.gameRepo.Finish(ctx, session.ID, avgReaction, winnerID); err != nil {
+		log.Printf("Failed to finish game session: %v", err)
+	}
+
+	// Build rank map from ranking
+	rankMap := make(map[string]int)
+	for _, r := range ranking {
+		rankMap[r.Username] = r.Rank
+	}
+
+	// Insert per-player results into game_session_players
+	for _, ps := range players {
+		bestReaction := 0
+		playerAvgReaction := 0
+		if len(ps.Reactions) > 0 {
+			bestReaction = ps.Reactions[0]
+			sum := 0
+			for _, r := range ps.Reactions {
+				sum += r
+				if r < bestReaction {
+					bestReaction = r
+				}
+			}
+			playerAvgReaction = sum / len(ps.Reactions)
+		}
+
+		playerResult := &model.GameSessionPlayer{
+			SessionID:      session.ID,
+			UserID:         ps.Client.ID,
+			Score:          ps.Score,
+			AvgReactionMs:  playerAvgReaction,
+			BestReactionMs: bestReaction,
+			Rank:           rankMap[ps.Client.Username],
+		}
+		if err := h.gameRepo.CreatePlayerResult(ctx, playerResult); err != nil {
+			log.Printf("Failed to save player result for %s: %v", ps.Client.Username, err)
+		}
+
+		// Update user stats
+		if err := h.userRepo.UpdateStats(ctx, ps.Client.ID, int64(ps.Score), bestReaction); err != nil {
+			log.Printf("Failed to update stats for %s: %v", ps.Client.Username, err)
+		}
+	}
+
+	log.Printf("Game %s results saved. Players: %d, Winner: %v", room.ID, len(players), winnerID)
 }
