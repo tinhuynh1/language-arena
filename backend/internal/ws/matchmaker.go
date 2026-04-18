@@ -11,6 +11,7 @@ type queueEntry struct {
 	Client   *Client
 	Language string
 	Level    string
+	QuizType model.QuizType
 }
 
 type Matchmaker struct {
@@ -26,19 +27,19 @@ func NewMatchmaker(hub *Hub) *Matchmaker {
 	}
 }
 
-func (m *Matchmaker) Enqueue(client *Client, language, level string) {
+func (m *Matchmaker) Enqueue(client *Client, language, level string, quizType model.QuizType) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	for i, entry := range m.queue {
-		if entry.Language == language && entry.Level == level && entry.Client.ID != client.ID {
+		if entry.Language == language && entry.Level == level && entry.QuizType == quizType && entry.Client.ID != client.ID {
 			opponent := entry.Client
 
 			m.queue = append(m.queue[:i], m.queue[i+1:]...)
 
 			vocabs := m.hub.GetVocabs(language, level, maxRounds+numTargets)
 
-			room := NewRoom(language, level, model.ModeDuel, vocabs, m.hub)
+			room := NewRoom(language, level, model.ModeDuel, quizType, vocabs, m.hub)
 			room.AddPlayer(opponent)
 			room.AddPlayer(client)
 
@@ -58,7 +59,7 @@ func (m *Matchmaker) Enqueue(client *Client, language, level string) {
 		}
 	}
 
-	m.queue = append(m.queue, queueEntry{Client: client, Language: language, Level: level})
+	m.queue = append(m.queue, queueEntry{Client: client, Language: language, Level: level, QuizType: quizType})
 	client.SendMessage(WSMessage{Type: MsgQueueJoined, Data: map[string]string{"status": "waiting"}})
 	log.Printf("Player %s joined queue for %s/%s", client.Username, language, level)
 }

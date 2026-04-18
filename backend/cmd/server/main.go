@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sort"
 	"syscall"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/michael/language-arena/backend/internal/config"
 	"github.com/michael/language-arena/backend/internal/handler"
 	"github.com/michael/language-arena/backend/internal/middleware"
+	"github.com/michael/language-arena/backend/internal/migration"
 	"github.com/michael/language-arena/backend/internal/repository"
 	"github.com/michael/language-arena/backend/internal/service"
 	"github.com/michael/language-arena/backend/internal/ws"
@@ -140,75 +142,48 @@ func setupRouter(
 }
 
 func runMigrations(db *sql.DB) error {
-	migrations := []string{
-		`CREATE TABLE IF NOT EXISTS users (
-			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-			username VARCHAR(50) UNIQUE NOT NULL,
-			email VARCHAR(255) UNIQUE NOT NULL,
-			password_hash VARCHAR(255) NOT NULL,
-			total_score BIGINT DEFAULT 0,
-			games_played INT DEFAULT 0,
-			best_reaction_ms INT DEFAULT 0,
-			created_at TIMESTAMPTZ DEFAULT NOW()
-		)`,
-		`CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)`,
-		`CREATE INDEX IF NOT EXISTS idx_users_total_score ON users(total_score DESC)`,
-		`CREATE TABLE IF NOT EXISTS vocabularies (
-			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-			word VARCHAR(100) NOT NULL,
-			meaning VARCHAR(255) NOT NULL,
-			language VARCHAR(5) NOT NULL,
-			level VARCHAR(10) NOT NULL DEFAULT 'A1',
-			difficulty INT DEFAULT 1 CHECK (difficulty BETWEEN 1 AND 3),
-			category VARCHAR(50)
-		)`,
-		`CREATE INDEX IF NOT EXISTS idx_vocabularies_language ON vocabularies(language)`,
-		`CREATE INDEX IF NOT EXISTS idx_vocabularies_level ON vocabularies(language, level)`,
-		`CREATE TABLE IF NOT EXISTS game_sessions (
-			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-			mode VARCHAR(10) NOT NULL CHECK (mode IN ('solo', 'duel', 'battle')),
-			language VARCHAR(5) NOT NULL,
-			winner_id UUID REFERENCES users(id),
-			rounds INT DEFAULT 10,
-			avg_reaction_ms INT DEFAULT 0,
-			created_at TIMESTAMPTZ DEFAULT NOW(),
-			finished_at TIMESTAMPTZ
-		)`,
-		// Add level column if table already exists (idempotent)
-		`DO $$ BEGIN
-			ALTER TABLE vocabularies ADD COLUMN IF NOT EXISTS level VARCHAR(10) NOT NULL DEFAULT 'A1';
-		EXCEPTION WHEN duplicate_column THEN NULL;
-		END $$`,
-		`CREATE TABLE IF NOT EXISTS game_session_players (
-			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-			session_id UUID NOT NULL REFERENCES game_sessions(id) ON DELETE CASCADE,
-			user_id UUID NOT NULL REFERENCES users(id),
-			score INT DEFAULT 0,
-			avg_reaction_ms INT DEFAULT 0,
-			best_reaction_ms INT DEFAULT 0,
-			rank INT DEFAULT 0,
-			created_at TIMESTAMPTZ DEFAULT NOW()
-		)`,
-		`CREATE INDEX IF NOT EXISTS idx_gsp_session ON game_session_players(session_id)`,
-		`CREATE INDEX IF NOT EXISTS idx_gsp_user ON game_session_players(user_id)`,
-		// Drop redundant player columns from game_sessions (now in game_session_players)
-		`DO $$ BEGIN
-			ALTER TABLE game_sessions DROP COLUMN IF EXISTS player1_id;
-			ALTER TABLE game_sessions DROP COLUMN IF EXISTS player2_id;
-			ALTER TABLE game_sessions DROP COLUMN IF EXISTS player1_score;
-			ALTER TABLE game_sessions DROP COLUMN IF EXISTS player2_score;
-		END $$`,
-		// Fix CHECK constraint to include 'battle' mode
-		`DO $$ BEGIN
-			ALTER TABLE game_sessions DROP CONSTRAINT IF EXISTS game_sessions_mode_check;
-			ALTER TABLE game_sessions ADD CONSTRAINT game_sessions_mode_check CHECK (mode IN ('solo', 'duel', 'battle'));
-		END $$`,
+	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS schema_migrations (
+		name VARCHAR(255) PRIMARY KEY,
+		applied_at TIMESTAMPTZ DEFAULT NOW()
+	)`); err != nil {
+		return fmt.Errorf("failed to create schema_migrations: %w", err)
 	}
 
-	for i, m := range migrations {
-		if _, err := db.Exec(m); err != nil {
-			return fmt.Errorf("migration %d failed: %w", i+1, err)
+	entries, err := migration.Files.ReadDir(".")
+	if err != nil {
+		return fmt.Errorf("failed to read migration files: %w", err)
+	}
+
+	names := make([]string, 0, len(entries))
+	for _, e := range entries {
+		if !e.IsDir() && len(e.Name()) > 4 && e.Name()[len(e.Name())-4:] == ".sql" {
+			names = append(names, e.Name())
 		}
+	}
+	sort.Strings(names)
+
+	for _, name := range names {
+		var applied bool
+		if err := db.QueryRow(`SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE name = $1)`, name).Scan(&applied); err != nil {
+			return fmt.Errorf("failed to check migration %s: %w", name, err)
+		}
+		if applied {
+			continue
+		}
+
+		content, err := migration.Files.ReadFile(name)
+		if err != nil {
+			return fmt.Errorf("failed to read migration file %s: %w", name, err)
+		}
+
+		if _, err := db.Exec(string(content)); err != nil {
+			return fmt.Errorf("migration %s failed: %w", name, err)
+		}
+
+		if _, err := db.Exec(`INSERT INTO schema_migrations (name) VALUES ($1)`, name); err != nil {
+			return fmt.Errorf("failed to record migration %s: %w", name, err)
+		}
+		log.Printf("  applied: %s", name)
 	}
 
 	return nil

@@ -45,6 +45,7 @@ type Room struct {
 	Language string
 	Level    string
 	Mode     model.GameMode
+	QuizType model.QuizType
 	State    RoomState
 	HostID   uuid.UUID
 	Hub      *Hub
@@ -60,13 +61,17 @@ type Room struct {
 	mu sync.Mutex
 }
 
-func NewRoom(language, level string, mode model.GameMode, vocabs []model.Vocabulary, hub *Hub) *Room {
+func NewRoom(language, level string, mode model.GameMode, quizType model.QuizType, vocabs []model.Vocabulary, hub *Hub) *Room {
+	if quizType == "" {
+		quizType = model.QuizTypeMeaningToWord
+	}
 	return &Room{
 		ID:          uuid.New().String()[:8],
 		Code:        generateRoomCode(),
 		Language:    language,
 		Level:       level,
 		Mode:        mode,
+		QuizType:    quizType,
 		State:       StateWaiting,
 		TotalRounds: maxRounds,
 		Vocabs:      vocabs,
@@ -194,7 +199,7 @@ func (r *Room) nextRound() {
 	roundData := RoundStartData{
 		Round:    r.CurrentRound,
 		Total:    r.TotalRounds,
-		Question: correctVocab.Meaning,
+		Question: r.getQuestion(correctVocab),
 		Targets:  targets,
 		TimeMs:   roundTimeMs,
 	}
@@ -223,33 +228,65 @@ func (r *Room) nextRound() {
 	})
 }
 
+func (r *Room) getQuestion(v model.Vocabulary) string {
+	switch r.QuizType {
+	case model.QuizTypeMeaningToWord:
+		return v.Meaning
+	case model.QuizTypeWordToMeaning, model.QuizTypeWordToIPA, model.QuizTypeWordToPinyin:
+		return v.Word
+	default:
+		return v.Meaning
+	}
+}
+
+func (r *Room) getLabel(v model.Vocabulary) string {
+	switch r.QuizType {
+	case model.QuizTypeWordToMeaning:
+		return v.Meaning
+	case model.QuizTypeWordToIPA:
+		if v.IPA != "" {
+			return v.IPA
+		}
+		return v.Word
+	case model.QuizTypeWordToPinyin:
+		if v.Pinyin != "" {
+			return v.Pinyin
+		}
+		return v.Word
+	default:
+		return v.Word
+	}
+}
+
 func (r *Room) generateTargets(correct model.Vocabulary) []Target {
 	targets := make([]Target, 0, numTargets)
 
-	// Generate non-overlapping positions using grid zones
 	positions := generateSpreadPositions(numTargets)
 
 	targets = append(targets, Target{
 		ID:      correct.ID.String()[:8],
 		Word:    correct.Word,
 		Meaning: correct.Meaning,
+		Label:   r.getLabel(correct),
 		X:       positions[0][0],
 		Y:       positions[0][1],
 		Correct: true,
 	})
 
-	used := map[string]bool{correct.Word: true}
+	used := map[string]bool{r.getLabel(correct): true}
 	posIdx := 1
 	for i := 0; i < numTargets-1; i++ {
 		for attempts := 0; attempts < 20; attempts++ {
 			idx := rand.Intn(len(r.Vocabs))
 			v := r.Vocabs[idx]
-			if !used[v.Word] {
-				used[v.Word] = true
+			label := r.getLabel(v)
+			if !used[label] {
+				used[label] = true
 				targets = append(targets, Target{
 					ID:      v.ID.String()[:8],
 					Word:    v.Word,
 					Meaning: v.Meaning,
+					Label:   label,
 					X:       positions[posIdx][0],
 					Y:       positions[posIdx][1],
 					Correct: false,

@@ -14,10 +14,17 @@ export interface WSMessage {
   data?: unknown;
 }
 
+export type QuizType =
+  | 'meaning_to_word'
+  | 'word_to_meaning'
+  | 'word_to_ipa'
+  | 'word_to_pinyin';
+
 export interface Target {
   id: string;
   word: string;
   meaning: string;
+  label: string;
   x: number;
   y: number;
   correct: boolean;

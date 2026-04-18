@@ -17,7 +17,7 @@ func NewVocabRepository(db *sql.DB) *VocabRepository {
 }
 
 func (r *VocabRepository) FindByLanguage(ctx context.Context, q model.VocabQuery) ([]model.Vocabulary, error) {
-	query := `SELECT id, word, meaning, language, level, difficulty, category FROM vocabularies 
+	query := `SELECT id, word, meaning, language, level, difficulty, category, COALESCE(ipa,''), COALESCE(pinyin,'') FROM vocabularies
 	          WHERE language = $1`
 	args := []interface{}{q.Language}
 	argIdx := 2
@@ -40,7 +40,7 @@ func (r *VocabRepository) FindByLanguage(ctx context.Context, q model.VocabQuery
 	vocabs := make([]model.Vocabulary, 0)
 	for rows.Next() {
 		var v model.Vocabulary
-		if err := rows.Scan(&v.ID, &v.Word, &v.Meaning, &v.Language, &v.Level, &v.Difficulty, &v.Category); err != nil {
+		if err := rows.Scan(&v.ID, &v.Word, &v.Meaning, &v.Language, &v.Level, &v.Difficulty, &v.Category, &v.IPA, &v.Pinyin); err != nil {
 			return nil, err
 		}
 		vocabs = append(vocabs, v)
@@ -49,7 +49,7 @@ func (r *VocabRepository) FindByLanguage(ctx context.Context, q model.VocabQuery
 }
 
 func (r *VocabRepository) GetRandomSet(ctx context.Context, language, level string, count int) ([]model.Vocabulary, error) {
-	query := `SELECT id, word, meaning, language, level, difficulty, category FROM vocabularies 
+	query := `SELECT id, word, meaning, language, level, difficulty, category, COALESCE(ipa,''), COALESCE(pinyin,'') FROM vocabularies
 	          WHERE language = $1`
 	args := []interface{}{language}
 	argIdx := 2
@@ -72,7 +72,7 @@ func (r *VocabRepository) GetRandomSet(ctx context.Context, language, level stri
 	vocabs := make([]model.Vocabulary, 0)
 	for rows.Next() {
 		var v model.Vocabulary
-		if err := rows.Scan(&v.ID, &v.Word, &v.Meaning, &v.Language, &v.Level, &v.Difficulty, &v.Category); err != nil {
+		if err := rows.Scan(&v.ID, &v.Word, &v.Meaning, &v.Language, &v.Level, &v.Difficulty, &v.Category, &v.IPA, &v.Pinyin); err != nil {
 			return nil, err
 		}
 		vocabs = append(vocabs, v)

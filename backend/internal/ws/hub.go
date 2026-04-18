@@ -111,7 +111,7 @@ func (h *Hub) handleJoinQueue(client *Client, msg WSMessage) {
 
 	if data.Mode == "solo" {
 		vocabs := h.GetVocabs(data.Language, data.Level, maxRounds+numTargets)
-		room := NewRoom(data.Language, data.Level, model.ModeSolo, vocabs, h)
+		room := NewRoom(data.Language, data.Level, model.ModeSolo, model.QuizType(data.QuizType), vocabs, h)
 		room.AddPlayer(client)
 		h.AddRoom(room)
 
@@ -122,7 +122,7 @@ func (h *Hub) handleJoinQueue(client *Client, msg WSMessage) {
 		return
 	}
 
-	h.Matchmaker.Enqueue(client, data.Language, data.Level)
+	h.Matchmaker.Enqueue(client, data.Language, data.Level, model.QuizType(data.QuizType))
 }
 
 func (h *Hub) handleCreateRoom(client *Client, msg WSMessage) {
@@ -146,7 +146,7 @@ func (h *Hub) handleCreateRoom(client *Client, msg WSMessage) {
 	}
 
 	vocabs := h.GetVocabs(data.Language, data.Level, maxRounds+numTargets)
-	room := NewRoom(data.Language, data.Level, model.ModeBattle, vocabs, h)
+	room := NewRoom(data.Language, data.Level, model.ModeBattle, model.QuizType(data.QuizType), vocabs, h)
 	room.HostID = client.ID
 	room.AddPlayer(client)
 	h.AddRoom(room)

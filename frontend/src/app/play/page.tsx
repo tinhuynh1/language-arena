@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useGame } from '@/hooks/useGame';
+import type { QuizType } from '@/hooks/useWebSocket';
 import GameCanvas from '@/components/game/GameCanvas';
 import Countdown from '@/components/game/Countdown';
 import GameOverScreen from '@/components/game/GameOverScreen';
@@ -14,12 +15,16 @@ const EN_LEVELS = [
   { value: 'A2', label: 'A2', desc: 'Elementary' },
   { value: 'B1', label: 'B1', desc: 'Intermediate' },
   { value: 'B2', label: 'B2', desc: 'Upper Intermediate' },
+  { value: 'C1', label: 'C1', desc: 'Advanced' },
+  { value: 'C2', label: 'C2', desc: 'Mastery' },
 ];
 
 const ZH_LEVELS = [
   { value: 'HSK1', label: 'HSK1', desc: 'Basic' },
   { value: 'HSK2', label: 'HSK2', desc: 'Elementary' },
   { value: 'HSK3', label: 'HSK3', desc: 'Intermediate' },
+  { value: 'HSK4', label: 'HSK4', desc: 'Upper Intermediate' },
+  { value: 'HSK5', label: 'HSK5', desc: 'Advanced' },
 ];
 
 export default function PlayPage() {
@@ -30,6 +35,7 @@ export default function PlayPage() {
   const [selectedMode, setSelectedMode] = useState<'solo' | 'duel' | 'battle'>('solo');
   const [selectedLang, setSelectedLang] = useState<string>('en');
   const [selectedLevel, setSelectedLevel] = useState<string>('A1');
+  const [selectedQuizType, setSelectedQuizType] = useState<QuizType>('meaning_to_word');
   const [joinCode, setJoinCode] = useState('');
   const [showJoinInput, setShowJoinInput] = useState(false);
   const [readySent, setReadySent] = useState(false);
@@ -41,16 +47,31 @@ export default function PlayPage() {
 
   const levels = selectedLang === 'en' ? EN_LEVELS : ZH_LEVELS;
 
+  const EN_QUIZ_TYPES: { value: QuizType; label: string; desc: string }[] = [
+    { value: 'meaning_to_word', label: 'Meaning → Word', desc: 'See meaning, shoot word' },
+    { value: 'word_to_meaning', label: 'Word → Meaning', desc: 'See word, shoot meaning' },
+    { value: 'word_to_ipa', label: 'Word → IPA', desc: 'See word, shoot IPA' },
+  ];
+
+  const ZH_QUIZ_TYPES: { value: QuizType; label: string; desc: string }[] = [
+    { value: 'meaning_to_word', label: 'Meaning → Word', desc: 'See meaning, shoot word' },
+    { value: 'word_to_meaning', label: 'Word → Meaning', desc: 'See word, shoot meaning' },
+    { value: 'word_to_pinyin', label: 'Word → Pinyin', desc: 'See word, shoot pinyin' },
+  ];
+
+  const quizTypes = selectedLang === 'en' ? EN_QUIZ_TYPES : ZH_QUIZ_TYPES;
+
   const handleLangChange = (lang: string) => {
     setSelectedLang(lang);
     setSelectedLevel(lang === 'en' ? 'A1' : 'HSK1');
+    setSelectedQuizType('meaning_to_word');
   };
 
   const handleStart = () => {
     if (selectedMode === 'battle') {
-      game.createRoom(selectedLang, selectedLevel);
+      game.createRoom(selectedLang, selectedLevel, selectedQuizType);
     } else {
-      game.joinGame(selectedMode, selectedLang, selectedLevel);
+      game.joinGame(selectedMode, selectedLang, selectedLevel, selectedQuizType);
     }
   };
 
@@ -70,9 +91,9 @@ export default function PlayPage() {
     setReadySent(false);
     setTimeout(() => {
       if (selectedMode === 'battle') {
-        game.createRoom(selectedLang, selectedLevel);
+        game.createRoom(selectedLang, selectedLevel, selectedQuizType);
       } else {
-        game.joinGame(selectedMode, selectedLang, selectedLevel);
+        game.joinGame(selectedMode, selectedLang, selectedLevel, selectedQuizType);
       }
     }, 300);
   };
@@ -145,7 +166,7 @@ export default function PlayPage() {
           </div>
 
           {/* Level Selection */}
-          <div className="mb-8">
+          <div className="mb-4 sm:mb-6">
             <div className="text-xs font-heading uppercase tracking-widest text-[var(--color-text-muted)] mb-3">
               Vocabulary Level
             </div>
@@ -163,6 +184,30 @@ export default function PlayPage() {
                 >
                   <div>{l.label}</div>
                   <div className="text-[10px] font-normal lowercase opacity-70">{l.desc}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Quiz Type Selection */}
+          <div className="mb-8">
+            <div className="text-xs font-heading uppercase tracking-widest text-[var(--color-text-muted)] mb-3">
+              Quiz Type
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {quizTypes.map(q => (
+                <button
+                  key={q.value}
+                  onClick={() => setSelectedQuizType(q.value)}
+                  className={`px-3 py-2 font-heading font-bold text-sm uppercase transition-all border text-left ${
+                    selectedQuizType === q.value
+                      ? 'border-[var(--color-accent-orange)] text-[var(--color-accent-orange)] bg-[rgba(255,107,53,0.1)]'
+                      : 'border-[var(--color-border-default)] text-[var(--color-text-secondary)] hover:border-[var(--color-text-muted)]'
+                  }`}
+                  style={{ borderRadius: '2px' }}
+                >
+                  <div>{q.label}</div>
+                  <div className="text-[10px] font-normal normal-case opacity-70">{q.desc}</div>
                 </button>
               ))}
             </div>
@@ -341,6 +386,7 @@ export default function PlayPage() {
         <GameCanvas
           targets={game.targets}
           question={game.question}
+          quizType={game.quizType}
           round={game.round}
           totalRounds={game.totalRounds}
           timeMs={game.timeMs}

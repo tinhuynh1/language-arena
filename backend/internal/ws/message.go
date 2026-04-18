@@ -39,11 +39,13 @@ type JoinQueueData struct {
 	Language string `json:"language"`
 	Level    string `json:"level"`
 	Mode     string `json:"mode"`
+	QuizType string `json:"quiz_type"`
 }
 
 type CreateRoomData struct {
 	Language string `json:"language"`
 	Level    string `json:"level"`
+	QuizType string `json:"quiz_type"`
 }
 
 type JoinRoomData struct {
@@ -79,6 +81,7 @@ type Target struct {
 	ID      string  `json:"id"`
 	Word    string  `json:"word"`
 	Meaning string  `json:"meaning"`
+	Label   string  `json:"label"`
 	X       float64 `json:"x"`
 	Y       float64 `json:"y"`
 	Correct bool    `json:"correct"`

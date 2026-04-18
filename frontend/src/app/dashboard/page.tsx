@@ -6,6 +6,22 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { api, type User } from '@/lib/api';
 
+function reactionColor(ms: number) {
+  if (ms <= 0) return '#00d4ff';
+  if (ms < 500) return '#00ff88';
+  if (ms < 1000) return '#ffd700';
+  return '#ff3548';
+}
+
+function StatCard({ value, label, color }: { value: string; label: string; color: string }) {
+  return (
+    <div className="card text-center py-5">
+      <div className="font-heading font-bold text-3xl sm:text-4xl mb-1" style={{ color }}>{value}</div>
+      <div className="text-[10px] font-heading uppercase tracking-widest text-[var(--color-text-muted)]">{label}</div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const { user: authUser } = useAuth();
   const router = useRouter();
@@ -25,64 +41,80 @@ export default function DashboardPage() {
 
   if (!authUser) return null;
 
-  const user = stats?.user || authUser;
+  const user = stats?.user ?? authUser;
 
   return (
-    <div className="min-h-screen px-6 py-12">
-      <div className="max-w-3xl mx-auto">
-        <h1 className="font-heading font-bold text-4xl mb-8 uppercase tracking-wider">
-          Dashboard
-        </h1>
+    <div className="relative min-h-screen px-6 py-12 overflow-hidden">
+      {/* Ambient orbs */}
+      <div className="orb w-[400px] h-[400px] opacity-[0.05] animate-float"
+           style={{ background: '#00ff88', top: '-5%', right: '-10%' }} />
+      <div className="orb w-[300px] h-[300px] opacity-[0.04] animate-float"
+           style={{ background: '#a855f7', bottom: '10%', left: '-10%', animationDelay: '-6s' }} />
+
+      <div className="relative z-10 max-w-2xl mx-auto">
+        <div className="mb-10 animate-fade-in-up">
+          <div className="badge mb-4">Profile</div>
+          <h1 className="font-heading font-bold text-4xl sm:text-5xl uppercase tracking-wider">
+            Dashboard
+          </h1>
+        </div>
 
         {loading ? (
-          <div className="text-center py-20">
-            <div className="w-10 h-10 border-2 border-[var(--color-accent-neon)] border-t-transparent rounded-full animate-spin mx-auto" />
+          <div className="space-y-4">
+            <div className="skeleton h-32 rounded-md" />
+            <div className="grid grid-cols-3 gap-4">
+              {[1, 2, 3].map(i => <div key={i} className="skeleton h-24 rounded-md" />)}
+            </div>
           </div>
         ) : (
           <>
-            {/* Player Card */}
-            <div className="card mb-8">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-16 h-16 flex items-center justify-center border-2 border-[var(--color-accent-neon)] font-heading font-bold text-2xl"
-                     style={{ borderRadius: '2px', color: '#00ff88' }}>
+            {/* Player card */}
+            <div className="card mb-6 animate-fade-in-up delay-100">
+              <div className="flex items-center gap-5">
+                {/* Avatar */}
+                <div
+                  className="w-16 h-16 flex-shrink-0 flex items-center justify-center border-2 border-[var(--color-accent-neon)] font-heading font-bold text-2xl text-[var(--color-accent-neon)]"
+                  style={{ borderRadius: '2px' }}
+                  aria-label={`Avatar for ${user.username}`}
+                >
                   {user.username[0]?.toUpperCase()}
                 </div>
-                <div>
-                  <div className="font-heading font-bold text-xl uppercase tracking-wider">{user.username}</div>
-                  <div className="text-sm text-[var(--color-text-muted)]">{user.email}</div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div className="text-center p-4 bg-[var(--color-bg-primary)]" style={{ borderRadius: '2px' }}>
-                  <div className="text-3xl font-heading font-bold" style={{ color: '#00ff88' }}>
-                    {user.total_score.toLocaleString()}
+                <div className="min-w-0">
+                  <div className="font-heading font-bold text-2xl uppercase tracking-wider truncate text-glow"
+                       style={{ color: '#00ff88' }}>
+                    {user.username}
                   </div>
-                  <div className="text-xs text-[var(--color-text-muted)] font-heading uppercase tracking-wider mt-1">Total Score</div>
-                </div>
-                <div className="text-center p-4 bg-[var(--color-bg-primary)]" style={{ borderRadius: '2px' }}>
-                  <div className="text-3xl font-heading font-bold" style={{ color: '#ff6b35' }}>
-                    {user.games_played}
-                  </div>
-                  <div className="text-xs text-[var(--color-text-muted)] font-heading uppercase tracking-wider mt-1">Games Played</div>
-                </div>
-                <div className="text-center p-4 bg-[var(--color-bg-primary)]" style={{ borderRadius: '2px' }}>
-                  <div className="text-3xl font-heading font-bold font-mono"
-                       style={{ color: user.best_reaction_ms < 500 ? '#00ff88' : user.best_reaction_ms < 1000 ? '#ffd700' : '#00d4ff' }}>
-                    {user.best_reaction_ms > 0 ? `${user.best_reaction_ms}ms` : '—'}
-                  </div>
-                  <div className="text-xs text-[var(--color-text-muted)] font-heading uppercase tracking-wider mt-1">Best Reaction</div>
+                  <div className="text-sm text-[var(--color-text-muted)] truncate">{user.email}</div>
                 </div>
               </div>
             </div>
 
-            {/* Quick Actions */}
-            <div className="flex gap-4">
+            {/* Stats grid */}
+            <div className="grid grid-cols-3 gap-4 mb-6 animate-fade-in-up delay-200">
+              <StatCard
+                value={user.total_score.toLocaleString()}
+                label="Total Score"
+                color="#00ff88"
+              />
+              <StatCard
+                value={String(user.games_played)}
+                label="Games Played"
+                color="#ff6b35"
+              />
+              <StatCard
+                value={user.best_reaction_ms > 0 ? `${user.best_reaction_ms}ms` : '—'}
+                label="Best Reaction"
+                color={reactionColor(user.best_reaction_ms)}
+              />
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-4 animate-fade-in-up delay-300">
               <Link href="/play" className="btn-primary flex-1 text-center">
-                PLAY NOW
+                Play Now
               </Link>
               <Link href="/leaderboard" className="btn-secondary flex-1 text-center">
-                LEADERBOARD
+                Leaderboard
               </Link>
             </div>
           </>

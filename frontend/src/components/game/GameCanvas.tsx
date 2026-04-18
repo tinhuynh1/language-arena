@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import type { Target } from '@/hooks/useWebSocket';
+import type { Target, QuizType } from '@/hooks/useWebSocket';
 
 interface GameCanvasProps {
   targets: Target[];
   question: string;
+  quizType: QuizType;
   round: number;
   totalRounds: number;
   timeMs: number;
@@ -17,9 +18,17 @@ interface GameCanvasProps {
   onHit: (targetId: string) => number;
 }
 
+const QUIZ_LABELS: Record<QuizType, string> = {
+  meaning_to_word: 'Find the word for',
+  word_to_meaning: 'Find the meaning of',
+  word_to_ipa: 'Find the IPA for',
+  word_to_pinyin: 'Find the pinyin for',
+};
+
 export default function GameCanvas({
   targets,
   question,
+  quizType,
   round,
   totalRounds,
   timeMs,
@@ -123,7 +132,7 @@ export default function GameCanvas({
 
       {/* Question */}
       <div className="absolute top-14 sm:top-20 left-1/2 -translate-x-1/2 z-20 text-center">
-        <div className="text-[10px] sm:text-xs text-[var(--color-text-muted)] font-heading uppercase tracking-widest mb-1">Find the word for</div>
+        <div className="text-[10px] sm:text-xs text-[var(--color-text-muted)] font-heading uppercase tracking-widest mb-1">{QUIZ_LABELS[quizType]}</div>
         <div className="text-lg sm:text-2xl font-heading font-bold text-[var(--color-accent-cyan)] px-3 sm:px-4 py-1.5 sm:py-2 border border-[var(--color-accent-cyan)] bg-[rgba(0,212,255,0.05)]"
              style={{ borderRadius: '2px' }}>
           {question}
@@ -167,7 +176,7 @@ export default function GameCanvas({
               textAlign: 'center',
             }}
           >
-            {target.word}
+            {target.label || target.word}
           </button>
         ))}
       </div>

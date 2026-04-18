@@ -10,6 +10,8 @@ type Vocabulary struct {
 	Level      string    `json:"level" db:"level"`
 	Difficulty int       `json:"difficulty" db:"difficulty"`
 	Category   string    `json:"category" db:"category"`
+	IPA        string    `json:"ipa" db:"ipa"`
+	Pinyin     string    `json:"pinyin" db:"pinyin"`
 }
 
 type VocabQuery struct {

@@ -5,6 +5,7 @@ import {
   useWebSocket,
   type WSMessage,
   type Target,
+  type QuizType,
   type RoundStartData,
   type ScoreUpdateData,
   type GameOverData,
@@ -22,6 +23,7 @@ interface GameStore {
   mode: 'solo' | 'duel' | 'battle';
   language: string;
   level: string;
+  quizType: QuizType;
   roomId: string;
   roomCode: string;
   opponent: string;
@@ -45,6 +47,7 @@ const initialStore: GameStore = {
   mode: 'solo',
   language: 'en',
   level: 'A1',
+  quizType: 'meaning_to_word',
   roomId: '',
   roomCode: '',
   opponent: '',
@@ -178,21 +181,21 @@ export function useGame() {
     return removeHandler;
   }, [ws, updateStore]);
 
-  const joinGame = useCallback((mode: 'solo' | 'duel', language: string, level: string) => {
+  const joinGame = useCallback((mode: 'solo' | 'duel', language: string, level: string, quizType: QuizType) => {
     ws.connect();
-    updateStore({ ...initialStore, mode, language, level, state: 'queuing' });
+    updateStore({ ...initialStore, mode, language, level, quizType, state: 'queuing' });
 
     setTimeout(() => {
-      ws.send({ type: 'join_queue', data: { mode, language, level } });
+      ws.send({ type: 'join_queue', data: { mode, language, level, quiz_type: quizType } });
     }, 500);
   }, [ws, updateStore]);
 
-  const createRoom = useCallback((language: string, level: string) => {
+  const createRoom = useCallback((language: string, level: string, quizType: QuizType) => {
     ws.connect();
-    updateStore({ ...initialStore, mode: 'battle', language, level, state: 'creating_room' });
+    updateStore({ ...initialStore, mode: 'battle', language, level, quizType, state: 'creating_room' });
 
     setTimeout(() => {
-      ws.send({ type: 'create_room', data: { language, level } });
+      ws.send({ type: 'create_room', data: { language, level, quiz_type: quizType } });
     }, 500);
   }, [ws, updateStore]);
 
