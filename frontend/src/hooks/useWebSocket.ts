@@ -95,8 +95,10 @@ export function useWebSocket() {
   const [connected, setConnected] = useState(false);
   const handlersRef = useRef<Set<MessageHandler>>(new Set());
 
+  const msgQueue = useRef<WSMessage[]>([]);
+
   const connect = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) return;
+    if (wsRef.current?.readyState === WebSocket.OPEN || wsRef.current?.readyState === WebSocket.CONNECTING) return;
 
     const ws = new WebSocket(getWsUrl());
     wsRef.current = ws;
@@ -104,6 +106,10 @@ export function useWebSocket() {
     ws.onopen = () => {
       setConnected(true);
       console.log('[WS] Connected');
+      while (msgQueue.current.length > 0) {
+        const msg = msgQueue.current.shift();
+        if (msg) ws.send(JSON.stringify(msg));
+      }
     };
 
     ws.onmessage = (event) => {
@@ -134,6 +140,8 @@ export function useWebSocket() {
   const send = useCallback((msg: WSMessage) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify(msg));
+    } else {
+      msgQueue.current.push(msg);
     }
   }, []);
 

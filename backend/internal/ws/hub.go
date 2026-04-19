@@ -3,7 +3,7 @@ package ws
 import (
 	"context"
 	"encoding/json"
-	"log"
+	"log/slog"
 	"sync"
 
 	"github.com/google/uuid"
@@ -13,6 +13,7 @@ import (
 )
 
 type Hub struct {
+	log        *slog.Logger
 	Clients    map[*Client]bool
 	Register   chan *Client
 	Unregister chan *Client
@@ -24,11 +25,15 @@ type Hub struct {
 	gameRepo     *repository.GameRepository
 	userRepo     *repository.UserRepository
 
+	Redis        *RedisAdapter
+	proxyClients map[string]*Client // userID → proxy client on this node
+
 	mu sync.RWMutex
 }
 
-func NewHub(vocabService *service.VocabService, gameRepo *repository.GameRepository, userRepo *repository.UserRepository) *Hub {
+func NewHub(vocabService *service.VocabService, gameRepo *repository.GameRepository, userRepo *repository.UserRepository, redisAdapter *RedisAdapter) *Hub {
 	h := &Hub{
+		log:          slog.Default().With("component", "WS"),
 		Clients:      make(map[*Client]bool),
 		Register:     make(chan *Client),
 		Unregister:   make(chan *Client),
@@ -37,8 +42,14 @@ func NewHub(vocabService *service.VocabService, gameRepo *repository.GameReposit
 		vocabService: vocabService,
 		gameRepo:     gameRepo,
 		userRepo:     userRepo,
+		Redis:        redisAdapter,
+		proxyClients: make(map[string]*Client),
 	}
 	h.Matchmaker = NewMatchmaker(h)
+	if redisAdapter != nil {
+		redisAdapter.SetHub(h)
+		redisAdapter.Subscribe()
+	}
 	return h
 }
 
@@ -49,7 +60,7 @@ func (h *Hub) Run() {
 			h.mu.Lock()
 			h.Clients[client] = true
 			h.mu.Unlock()
-			log.Printf("Client connected: %s (%s). Total: %d", client.Username, client.ID, len(h.Clients))
+			h.log.Info("client connected", "player", client.Username, "user_id", client.ID, "total", len(h.Clients))
 
 		case client := <-h.Unregister:
 			h.mu.Lock()
@@ -63,7 +74,31 @@ func (h *Hub) Run() {
 			if room := client.GetRoom(); room != nil {
 				room.RemovePlayer(client)
 			}
-			log.Printf("Client disconnected: %s. Total: %d", client.Username, len(h.Clients))
+
+			// Clean up any cross-instance proxy mappings for this client
+			if h.Redis != nil {
+				h.mu.Lock()
+				for key, c := range h.proxyClients {
+					if c == client {
+						parts := splitProxyKey(key)
+						if len(parts) == 2 {
+							if ownerNode, found := h.Redis.LookupRoom(parts[1]); found {
+								h.Redis.PublishToNode(ownerNode, RedisMessage{
+									Type:     RedisProxyLeft,
+									FromNode: h.Redis.NodeID,
+									RoomCode: parts[1],
+									UserID:   client.ID.String(),
+									Username: client.Username,
+								})
+							}
+						}
+						delete(h.proxyClients, key)
+					}
+				}
+				h.mu.Unlock()
+			}
+
+			h.log.Info("client disconnected", "player", client.Username, "user_id", client.ID, "total", len(h.Clients))
 		}
 	}
 }
@@ -161,7 +196,12 @@ func (h *Hub) handleCreateRoom(client *Client, msg WSMessage) {
 		},
 	})
 
-	log.Printf("Battle room %s (code: %s) created by %s", room.ID, room.Code, client.Username)
+	// Register in Redis so other instances can find this room
+	if h.Redis != nil {
+		h.Redis.RegisterRoom(room.Code, h.Redis.NodeID)
+	}
+
+	h.log.Info("room created", "room_id", room.ID, "room_code", room.Code, "host", client.Username, "language", data.Language, "level", data.Level)
 }
 
 func (h *Hub) handleJoinRoom(client *Client, msg WSMessage) {
@@ -177,79 +217,108 @@ func (h *Hub) handleJoinRoom(client *Client, msg WSMessage) {
 		return
 	}
 
+	// Try local first
 	h.mu.RLock()
 	room, ok := h.RoomByCode[data.RoomCode]
 	h.mu.RUnlock()
 
-	if !ok {
-		client.SendMessage(WSMessage{Type: MsgError, Data: "room not found"})
+	if ok {
+		// Room is on this instance — join directly
+		if !room.AddPlayer(client) {
+			client.SendMessage(WSMessage{Type: MsgError, Data: "room is full or game started"})
+			return
+		}
+
+		client.SendMessage(WSMessage{
+			Type: MsgMatchFound,
+			Data: MatchFoundData{
+				RoomID:      room.ID,
+				PlayerCount: len(room.Players),
+				Mode:        string(room.Mode),
+			},
+		})
+
+		names := room.getPlayerNames()
+		room.broadcast(WSMessage{
+			Type: MsgPlayerJoined,
+			Data: PlayerJoinedData{
+				Username:    client.Username,
+				PlayerCount: len(room.Players),
+				Players:     names,
+			},
+		})
+
+		h.log.Info("player joined room", "player", client.Username, "room_id", room.ID, "room_code", room.Code, "player_count", len(room.Players))
 		return
 	}
 
-	if !room.AddPlayer(client) {
-		client.SendMessage(WSMessage{Type: MsgError, Data: "room is full or game started"})
-		return
+	// Room not local — check Redis for cross-instance
+	if h.Redis != nil {
+		if ownerNode, found := h.Redis.LookupRoom(data.RoomCode); found {
+			if ownerNode == h.Redis.NodeID {
+				// Stale registry entry
+				client.SendMessage(WSMessage{Type: MsgError, Data: "room not found"})
+				return
+			}
+
+			// Cross-instance join: register this client as a remote player
+			// and send proxy_join to the owning node
+			h.mu.Lock()
+			h.proxyClients[client.ID.String()+":"+data.RoomCode] = client
+			h.mu.Unlock()
+
+			h.Redis.PublishToNode(ownerNode, RedisMessage{
+				Type:     RedisProxyJoin,
+				FromNode: h.Redis.NodeID,
+				RoomCode: data.RoomCode,
+				UserID:   client.ID.String(),
+				Username: client.Username,
+			})
+
+			h.log.Info("cross-instance join requested", "player", client.Username, "room_code", data.RoomCode, "target_node", ownerNode)
+			return
+		}
 	}
 
-	// Notify joining player
-	client.SendMessage(WSMessage{
-		Type: MsgMatchFound,
-		Data: MatchFoundData{
-			RoomID:      room.ID,
-			PlayerCount: len(room.Players),
-			Mode:        string(room.Mode),
-		},
-	})
-
-	// Notify all players about new join
-	names := room.getPlayerNames()
-	room.broadcast(WSMessage{
-		Type: MsgPlayerJoined,
-		Data: PlayerJoinedData{
-			Username:    client.Username,
-			PlayerCount: len(room.Players),
-			Players:     names,
-		},
-	})
-
-	log.Printf("Player %s joined room %s (code: %s). Total: %d", client.Username, room.ID, room.Code, len(room.Players))
+	client.SendMessage(WSMessage{Type: MsgError, Data: "room not found"})
 }
 
 func (h *Hub) handleStartGame(client *Client) {
 	room := client.GetRoom()
-	if room == nil {
-		client.SendMessage(WSMessage{Type: MsgError, Data: "not in a room"})
+	if room != nil {
+		room.StartByHost(client)
 		return
 	}
-	room.StartByHost(client)
+	// Cross-instance: forward to room owner
+	h.forwardProxyAction(client, "start_game", nil)
 }
 
 func (h *Hub) handleReady(client *Client) {
 	room := client.GetRoom()
-	if room == nil {
-		client.SendMessage(WSMessage{Type: MsgError, Data: "not in a room"})
+	if room != nil {
+		room.SetReady(client)
 		return
 	}
-	room.SetReady(client)
+	h.forwardProxyAction(client, "ready", nil)
 }
 
 func (h *Hub) handleTargetHit(client *Client, msg WSMessage) {
 	room := client.GetRoom()
-	if room == nil {
+	if room != nil {
+		dataBytes, err := json.Marshal(msg.Data)
+		if err != nil {
+			return
+		}
+		var data TargetHitData
+		if err := json.Unmarshal(dataBytes, &data); err != nil {
+			return
+		}
+		room.HandleHit(client, data)
 		return
 	}
-
-	dataBytes, err := json.Marshal(msg.Data)
-	if err != nil {
-		return
-	}
-
-	var data TargetHitData
-	if err := json.Unmarshal(dataBytes, &data); err != nil {
-		return
-	}
-
-	room.HandleHit(client, data)
+	// Cross-instance: forward the action data
+	rawData, _ := json.Marshal(msg.Data)
+	h.forwardProxyAction(client, "target_hit", rawData)
 }
 
 func (h *Hub) handleLeaveRoom(client *Client) {
@@ -259,12 +328,267 @@ func (h *Hub) handleLeaveRoom(client *Client) {
 		client.SetRoom(nil)
 	}
 	h.Matchmaker.Remove(client)
+	h.forwardProxyAction(client, "leave", nil)
+}
+
+// forwardProxyAction sends an action via Redis to the room-owning instance.
+func (h *Hub) forwardProxyAction(client *Client, actionType string, actionData json.RawMessage) {
+	if h.Redis == nil {
+		return
+	}
+
+	userID := client.ID.String()
+
+	h.mu.RLock()
+	var roomCode string
+	for key, c := range h.proxyClients {
+		if c == client {
+			parts := splitProxyKey(key)
+			if len(parts) == 2 {
+				roomCode = parts[1]
+			}
+			break
+		}
+	}
+	h.mu.RUnlock()
+
+	if roomCode == "" {
+		return
+	}
+
+	ownerNode, found := h.Redis.LookupRoom(roomCode)
+	if !found {
+		return
+	}
+
+	h.Redis.PublishToNode(ownerNode, RedisMessage{
+		Type:       RedisProxyAction,
+		FromNode:   h.Redis.NodeID,
+		RoomCode:   roomCode,
+		UserID:     userID,
+		Username:   client.Username,
+		ActionType: actionType,
+		ActionData: actionData,
+	})
+
+	// If leaving, clean up local proxy mapping
+	if actionType == "leave" {
+		h.mu.Lock()
+		delete(h.proxyClients, userID+":"+roomCode)
+		h.mu.Unlock()
+	}
+}
+
+
+func splitProxyKey(key string) []string {
+	for i := len(key) - 1; i >= 0; i-- {
+		if key[i] == ':' {
+			return []string{key[:i], key[i+1:]}
+		}
+	}
+	return []string{key}
+}
+
+// HandleRedisMessage processes messages from other instances via Redis Pub/Sub.
+func (h *Hub) HandleRedisMessage(msg RedisMessage) {
+	switch msg.Type {
+	case RedisProxyJoin:
+		h.handleProxyJoin(msg)
+	case RedisProxyAction:
+		h.handleProxyAction(msg)
+	case RedisRelayWS:
+		h.handleRelayWS(msg)
+	case RedisProxyLeft:
+		h.handleProxyLeft(msg)
+	default:
+		h.log.Warn("unknown redis message type", "type", msg.Type, "from_node", msg.FromNode)
+	}
+}
+
+// handleProxyJoin: a player on another instance wants to join a room on THIS instance.
+// We create a ProxyClient whose SendMessage publishes back to the joiner's node.
+func (h *Hub) handleProxyJoin(msg RedisMessage) {
+	h.mu.RLock()
+	room, ok := h.RoomByCode[msg.RoomCode]
+	h.mu.RUnlock()
+
+	if !ok {
+		h.log.Warn("proxy_join: room not found", "room_code", msg.RoomCode)
+		return
+	}
+
+	userID, err := uuid.Parse(msg.UserID)
+	if err != nil {
+		h.log.Error("proxy_join: invalid user_id", "user_id", msg.UserID)
+		return
+	}
+
+	fromNode := msg.FromNode
+	proxyUserID := msg.UserID
+	roomCode := msg.RoomCode
+
+	// Create a ProxyClient — its SendMessage relays via Redis to the joiner's node
+	proxy := &Client{
+		ID:       userID,
+		Username: msg.Username,
+		Hub:      h,
+		Send:     make(chan []byte, 256),
+		IsProxy:  true,
+	}
+	proxy.RelayFunc = func(wsMsg WSMessage) {
+		wsData, err := json.Marshal(wsMsg)
+		if err != nil {
+			return
+		}
+		h.Redis.PublishToNode(fromNode, RedisMessage{
+			Type:      RedisRelayWS,
+			FromNode:  h.Redis.NodeID,
+			RoomCode:  roomCode,
+			UserID:    proxyUserID,
+			WSMessage: wsData,
+		})
+	}
+
+	if !room.AddPlayer(proxy) {
+		h.log.Warn("proxy_join: room full or started", "room_code", msg.RoomCode)
+		return
+	}
+
+	// Track proxy for action forwarding
+	h.mu.Lock()
+	h.proxyClients[proxyUserID+":"+roomCode] = proxy
+	h.mu.Unlock()
+
+	// Send match_found via relay
+	proxy.SendMessage(WSMessage{
+		Type: MsgMatchFound,
+		Data: MatchFoundData{
+			RoomID:      room.ID,
+			PlayerCount: len(room.Players),
+			Mode:        string(room.Mode),
+		},
+	})
+
+	// Broadcast player_joined to all (including proxy)
+	names := room.getPlayerNames()
+	room.broadcast(WSMessage{
+		Type: MsgPlayerJoined,
+		Data: PlayerJoinedData{
+			Username:    msg.Username,
+			PlayerCount: len(room.Players),
+			Players:     names,
+		},
+	})
+
+	h.log.Info("proxy client added", "player", msg.Username, "room_code", msg.RoomCode, "from_node", msg.FromNode)
+}
+
+// handleProxyAction: a player on another instance performed an action (hit, ready, start, leave)
+func (h *Hub) handleProxyAction(msg RedisMessage) {
+	key := msg.UserID + ":" + msg.RoomCode
+
+	h.mu.RLock()
+	proxy, ok := h.proxyClients[key]
+	h.mu.RUnlock()
+
+	if !ok {
+		h.log.Warn("proxy_action: no proxy found", "user_id", msg.UserID, "room_code", msg.RoomCode)
+		return
+	}
+
+	room := proxy.GetRoom()
+	if room == nil {
+		return
+	}
+
+	switch msg.ActionType {
+	case "target_hit":
+		var data TargetHitData
+		if err := json.Unmarshal(msg.ActionData, &data); err == nil {
+			room.HandleHit(proxy, data)
+		}
+	case "ready":
+		room.SetReady(proxy)
+	case "start_game":
+		room.StartByHost(proxy)
+	case "leave":
+		room.RemovePlayer(proxy)
+		h.mu.Lock()
+		delete(h.proxyClients, key)
+		h.mu.Unlock()
+	}
+}
+
+// handleRelayWS: the room-owning instance sent a WS message for a player on THIS instance.
+// Find the real local client and forward the message.
+func (h *Hub) handleRelayWS(msg RedisMessage) {
+	key := msg.UserID + ":" + msg.RoomCode
+
+	h.mu.RLock()
+	realClient, ok := h.proxyClients[key]
+	h.mu.RUnlock()
+
+	if !ok {
+		return
+	}
+
+	var wsMsg WSMessage
+	if err := json.Unmarshal(msg.WSMessage, &wsMsg); err != nil {
+		h.log.Error("relay_ws: unmarshal error", "err", err)
+		return
+	}
+
+	// Send directly via the real WebSocket (bypass RelayFunc)
+	data, err := json.Marshal(wsMsg)
+	if err != nil {
+		return
+	}
+	select {
+	case realClient.Send <- data:
+	default:
+		h.log.Warn("relay_ws: send buffer full", "user_id", msg.UserID)
+	}
+}
+
+// handleProxyLeft: a player on another instance disconnected
+func (h *Hub) handleProxyLeft(msg RedisMessage) {
+	key := msg.UserID + ":" + msg.RoomCode
+
+	h.mu.RLock()
+	proxy, ok := h.proxyClients[key]
+	h.mu.RUnlock()
+
+	if !ok {
+		return
+	}
+
+	room := proxy.GetRoom()
+	if room != nil {
+		room.RemovePlayer(proxy)
+	}
+
+	h.mu.Lock()
+	delete(h.proxyClients, key)
+	h.mu.Unlock()
+
+	h.log.Info("proxy client removed", "player", msg.Username, "room_code", msg.RoomCode)
+}
+
+func (h *Hub) RemoveRoom(room *Room) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	delete(h.Rooms, room.ID)
+	delete(h.RoomByCode, room.Code)
+
+	if h.Redis != nil {
+		h.Redis.UnregisterRoom(room.Code)
+	}
 }
 
 func (h *Hub) GetVocabs(language, level string, count int) []model.Vocabulary {
 	vocabs, err := h.vocabService.GetRandomSet(context.Background(), language, level, count)
 	if err != nil || len(vocabs) == 0 {
-		log.Printf("failed to get vocabs: %v", err)
+		h.log.Error("failed to get vocabs, using fallback", "err", err, "language", language, "level", level)
 		return []model.Vocabulary{
 			{Word: "hello", Meaning: "xin chào", Language: "en", Level: "A1"},
 			{Word: "world", Meaning: "thế giới", Language: "en", Level: "A1"},
@@ -307,7 +631,7 @@ func (h *Hub) SaveGameResults(room *Room, ranking []LeaderboardPlayerData) {
 	}
 
 	if err := h.gameRepo.Create(ctx, session); err != nil {
-		log.Printf("Failed to create game session: %v", err)
+		h.log.Error("failed to create game session", "err", err, "room_id", room.ID)
 		return
 	}
 
@@ -338,7 +662,7 @@ func (h *Hub) SaveGameResults(room *Room, ranking []LeaderboardPlayerData) {
 	}
 
 	if err := h.gameRepo.Finish(ctx, session.ID, avgReaction, winnerID); err != nil {
-		log.Printf("Failed to finish game session: %v", err)
+		h.log.Error("failed to finish game session", "err", err, "session_id", session.ID)
 	}
 
 	// Build rank map from ranking
@@ -372,14 +696,14 @@ func (h *Hub) SaveGameResults(room *Room, ranking []LeaderboardPlayerData) {
 			Rank:           rankMap[ps.Client.Username],
 		}
 		if err := h.gameRepo.CreatePlayerResult(ctx, playerResult); err != nil {
-			log.Printf("Failed to save player result for %s: %v", ps.Client.Username, err)
+				h.log.Error("failed to save player result", "err", err, "player", ps.Client.Username)
 		}
 
 		// Update user stats
 		if err := h.userRepo.UpdateStats(ctx, ps.Client.ID, int64(ps.Score), bestReaction); err != nil {
-			log.Printf("Failed to update stats for %s: %v", ps.Client.Username, err)
+				h.log.Error("failed to update user stats", "err", err, "player", ps.Client.Username)
 		}
 	}
 
-	log.Printf("Game %s results saved. Players: %d, Winner: %v", room.ID, len(players), winnerID)
+	h.log.Info("game results saved", "room_id", room.ID, "players", len(players), "winner_id", winnerID)
 }

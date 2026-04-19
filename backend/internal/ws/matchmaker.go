@@ -1,7 +1,7 @@
 package ws
 
 import (
-	"log"
+	"log/slog"
 	"sync"
 
 	"github.com/michael/language-arena/backend/internal/model"
@@ -54,14 +54,20 @@ func (m *Matchmaker) Enqueue(client *Client, language, level string, quizType mo
 				Data: MatchFoundData{RoomID: room.ID, Opponent: opponent.Username, Mode: "duel"},
 			})
 
-			log.Printf("Match found: %s vs %s in room %s (level: %s)", opponent.Username, client.Username, room.ID, level)
+			slog.Info("match found",
+				"component", "WS",
+				"player_1", opponent.Username,
+				"player_2", client.Username,
+				"room_id", room.ID,
+				"level", level,
+			)
 			return
 		}
 	}
 
 	m.queue = append(m.queue, queueEntry{Client: client, Language: language, Level: level, QuizType: quizType})
 	client.SendMessage(WSMessage{Type: MsgQueueJoined, Data: map[string]string{"status": "waiting"}})
-	log.Printf("Player %s joined queue for %s/%s", client.Username, language, level)
+	slog.Info("player joined queue", "component", "WS", "player", client.Username, "language", language, "level", level)
 }
 
 func (m *Matchmaker) Remove(client *Client) {

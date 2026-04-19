@@ -564,3 +564,113 @@ numTargets   = 4      // 1 đúng + 3 sai
 countdownMs  = 3000   // 3 giây đếm ngược
 maxPlayers   = 100    // giới hạn phòng Battle
 ```
+
+---
+
+## 13. Logging Architecture
+
+### Thiết kế
+
+Hệ thống sử dụng `log/slog` (Go stdlib 1.21+) — structured logging với output JSON (production) hoặc Text (development).
+
+```
+┌────────────────────────────────────────────────────┐
+│  Logger Layer Architecture                         │
+│                                                    │
+│  Global Logger (slog.Default)                      │
+│    ├── attrs: (configured by LOG_LEVEL, LOG_FORMAT) │
+│    │                                               │
+│    ├── BOOT Logger (main.go)                       │
+│    │   └── component="BOOT"                        │
+│    │                                               │
+│    ├── HTTP Middleware Logger                       │
+│    │   └── component="HTTP", request_id, method,   │
+│    │       path, status, latency_ms, ip, user_id   │
+│    │                                               │
+│    ├── WS Logger (hub.go)                          │
+│    │   └── component="WS", player, user_id,        │
+│    │       room_id, room_code, player_count         │
+│    │                                               │
+│    ├── GAME Logger (room.go)                       │
+│    │   └── component="GAME", room_id, player,      │
+│    │       round, reaction_ms, points, total_score  │
+│    │                                               │
+│    └── REDIS Logger (redis_adapter.go)             │
+│        └── component="REDIS", node_id, room_code,  │
+│            from_node, channel                       │
+└────────────────────────────────────────────────────┘
+```
+
+### Log Levels
+
+| Level | Sử dụng | Ví dụ |
+|---|---|---|
+| `DEBUG` | Chi tiết game loop, grace period | `hit rejected: too late` |
+| `INFO` | Events chính: connect, join, score, game finish | `correct hit`, `room created` |
+| `WARN` | Lỗi không nghiêm trọng | `send buffer full`, `proxy not found` |
+| `ERROR` | Lỗi cần điều tra | `failed to save player result`, `ws upgrade error` |
+
+### Cấu hình
+
+| Biến môi trường | Mặc định | Mô tả |
+|---|---|---|
+| `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error` |
+| `LOG_FORMAT` | `json` | `json` (production), `text` (development) |
+
+### Request Tracing
+
+- **HTTP**: Middleware `RequestID()` sinh UUID 8-char cho mỗi request → header `X-Request-ID` → log field `request_id`
+- **WebSocket**: Mỗi log trong WS subsystem kèm `user_id` + `player` để trace theo user
+- **Game**: Mỗi Room có contextual logger với `room_id` cố định → filter tất cả log của 1 trận game
+
+### Output JSON ví dụ
+```json
+{"time":"2026-04-19T01:00:00Z","level":"INFO","msg":"correct hit","component":"GAME","room_id":"abc12345","player":"John","round":3,"reaction_ms":342,"points":931,"total_score":2456}
+```
+
+### Files liên quan
+- `pkg/logger/logger.go` — Init slog, output toggle
+- `internal/middleware/request_logger.go` — RequestID + HTTP request logging
+
+---
+
+## 14. Cross-Instance — Redis Pub/Sub
+
+### Thiết kế
+
+Khi chạy nhiều backend instance, Redis đóng vai trò:
+1. **Room Registry** (`HSET lingo:room_registry`) — map room code → node ID
+2. **Message Bus** (Pub/Sub channels `lingo:node:{nodeID}`) — chuyển tiếp WS messages giữa instances
+
+```
+Instance 1 (Room Owner)         Redis              Instance 2 (Joiner)
+   ┌──────────────┐          ┌────────┐          ┌──────────────┐
+   │ Room ABCDEF   │◄─Pub/Sub─│Registry│─Pub/Sub─►│ Real WS User │
+   │ + ProxyClient │─────────►│Channels│◄─────────│              │
+   └──────────────┘          └────────┘          └──────────────┘
+```
+
+### ProxyClient
+
+`Client` với `RelayFunc` — khi Room broadcast, ProxyClient gửi qua Redis thay vì WebSocket.
+
+### Message Protocol
+
+| Message | Direction | Mô tả |
+|---|---|---|
+| `proxy_join` | Joiner → Owner | Player ở instance khác muốn join room |
+| `proxy_action` | Joiner → Owner | Forward target_hit/ready/start/leave |
+| `relay_ws` | Owner → Joiner | Chuyển WS broadcast cho real client |
+| `proxy_left` | Joiner → Owner | Player disconnect |
+
+### Chạy multi-instance
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.scale.yml up --build -d
+```
+
+### Files liên quan
+- `internal/ws/redis_adapter.go` — RedisAdapter, room registry, Pub/Sub
+- `docker-compose.scale.yml` — 2 backend instances
+- `nginx/default.scale.conf` — upstream pool load balancing
+

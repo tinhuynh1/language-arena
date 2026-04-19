@@ -1,0 +1,85 @@
+name: Deploy Next.js & Go to GKE
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  PROJECT_ID: lingo-sniper-prod
+  GAR_LOCATION: asia-southeast1
+  REGION: asia-southeast1
+  REPOSITORY: lingo-sniper
+  CLUSTER_NAME: lingo-sniper-cluster
+  # Tên Github Repo của bạn (Ví dụ: user/repo)
+  GITHUB_REPO: michael/language-arena
+  
+  # === BẠN CẦN THAY THẾ (CẬP NHẬT) BIẾN NÀY SAU KHI CHẠY SCRIPT WIF ===
+  # Định dạng: projects/123456789/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+  WORKLOAD_IDENTITY_PROVIDER: 'projects/YOUR_PROJECT_NUMBER/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
+  
+  # === BẠN CẦN THAY THẾ (CẬP NHẬT) BIẾN NÀY DƯỚI DẠNG SECRET TRONG GITHUB ===
+  # Nhưng tạm thời chúng ta hardcode email vào đây để tiện demo
+  SERVICE_ACCOUNT: 'github-actions@lingo-sniper-prod.iam.gserviceaccount.com'
+
+jobs:
+  setup-build-publish-deploy:
+    name: Setup, Build, Publish, and Deploy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write' # Bắt buộc đối với WIF
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Authenticate to Google Cloud
+      id: auth
+      uses: google-github-actions/auth@v2
+      with:
+        token_format: 'access_token'
+        workload_identity_provider: '${{ env.WORKLOAD_IDENTITY_PROVIDER }}'
+        service_account: '${{ env.SERVICE_ACCOUNT }}'
+
+    - name: Authenticate Docker to GAR
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.GAR_LOCATION }}-docker.pkg.dev
+        username: oauth2accesstoken
+        password: ${{ steps.auth.outputs.access_token }}
+
+    - name: Set up GKE credentials
+      uses: google-github-actions/get-gke-credentials@v2
+      with:
+        cluster_name: ${{ env.CLUSTER_NAME }}
+        location: ${{ env.REGION }}
+
+    - name: Build and Push Backend
+      run: |
+        docker buildx build --platform linux/amd64 -t ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/backend:${{ github.sha }} ./backend
+        docker push ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/backend:${{ github.sha }}
+
+    - name: Build and Push Frontend
+      run: |
+        docker buildx build --platform linux/amd64 -t ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/frontend:${{ github.sha }} ./frontend
+        docker push ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/frontend:${{ github.sha }}
+
+    - name: Set up Kustomize
+      run: |
+        curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+        sudo mv kustomize /usr/local/bin/
+
+    - name: Deploy to GKE
+      run: |
+        cd k8s
+        # Thay thế Tag ảnh bằng mã Commit SHA của Github
+        kustomize edit set image asia-southeast1-docker.pkg.dev/lingo-sniper-prod/lingo-sniper/backend=asia-southeast1-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/backend:${{ github.sha }}
+        kustomize edit set image asia-southeast1-docker.pkg.dev/lingo-sniper-prod/lingo-sniper/frontend=asia-southeast1-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/frontend:${{ github.sha }}
+        
+        # Deploy config apply thay vì manifest thô
+        kustomize build . | kubectl apply -f -
+        
+        # Đợi Pods ổn định
+        kubectl rollout status deployment/backend -n lingo-sniper --timeout=300s
+        kubectl rollout status deployment/frontend -n lingo-sniper --timeout=300s

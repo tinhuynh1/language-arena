@@ -1,7 +1,7 @@
 package ws
 
 import (
-	"log"
+	"log/slog"
 	"math/rand"
 	"sort"
 	"strings"
@@ -40,6 +40,7 @@ type PlayerState struct {
 }
 
 type Room struct {
+	log      *slog.Logger
 	ID       string
 	Code     string
 	Language string
@@ -65,8 +66,9 @@ func NewRoom(language, level string, mode model.GameMode, quizType model.QuizTyp
 	if quizType == "" {
 		quizType = model.QuizTypeMeaningToWord
 	}
+	roomID := uuid.New().String()[:8]
 	return &Room{
-		ID:          uuid.New().String()[:8],
+		ID:          roomID,
 		Code:        generateRoomCode(),
 		Language:    language,
 		Level:       level,
@@ -77,6 +79,10 @@ func NewRoom(language, level string, mode model.GameMode, quizType model.QuizTyp
 		Vocabs:      vocabs,
 		Players:     make(map[*Client]*PlayerState),
 		Hub:         hub,
+		log: slog.Default().With(
+			"component", "GAME",
+			"room_id", roomID,
+		),
 	}
 }
 
@@ -312,10 +318,10 @@ func (r *Room) HandleHit(client *Client, data TargetHitData) {
 	if r.State == StateRoundEnd {
 		elapsed := time.Since(r.RoundStartAt).Milliseconds()
 		if elapsed > int64(roundTimeMs+graceMs) {
-			log.Printf("[SCORE] %s | Round %d | ⏰ Too late (elapsed=%dms, grace expired)", client.Username, r.CurrentRound, elapsed)
+			r.log.Debug("hit rejected: too late", "player", client.Username, "round", r.CurrentRound, "elapsed_ms", elapsed)
 			return
 		}
-		log.Printf("[SCORE] %s | Round %d | ⏳ Grace period accepted (elapsed=%dms)", client.Username, r.CurrentRound, elapsed)
+		r.log.Debug("hit accepted in grace period", "player", client.Username, "round", r.CurrentRound, "elapsed_ms", elapsed)
 	} else if r.State != StatePlaying {
 		return
 	}
@@ -336,16 +342,24 @@ func (r *Room) HandleHit(client *Client, data TargetHitData) {
 		points := calculateScore(data.ReactionMs)
 		ps.Score += points
 		ps.Reactions = append(ps.Reactions, data.ReactionMs)
-		log.Printf("[SCORE] %s | Round %d | ✅ Correct | reaction=%dms | +%d points | total=%d",
-			client.Username, r.CurrentRound, data.ReactionMs, points, ps.Score)
+		r.log.Info("correct hit",
+			"player", client.Username,
+			"round", r.CurrentRound,
+			"reaction_ms", data.ReactionMs,
+			"points", points,
+			"total_score", ps.Score,
+		)
 	} else {
-		before := ps.Score
 		ps.Score -= 50
 		if ps.Score < 0 {
 			ps.Score = 0
 		}
-		log.Printf("[SCORE] %s | Round %d | ❌ Wrong | -%d points | total=%d",
-			client.Username, r.CurrentRound, before-ps.Score, ps.Score)
+		r.log.Info("wrong hit",
+			"player", client.Username,
+			"round", r.CurrentRound,
+			"penalty", 50,
+			"total_score", ps.Score,
+		)
 	}
 
 	// Send personal score update to the player
@@ -470,12 +484,17 @@ func (r *Room) finishGame() {
 		})
 	}
 
-	log.Printf("Game %s finished. Mode: %s, Winner: %s, Players: %d",
-		r.ID, r.Mode, winner, len(r.Players))
+	r.log.Info("game finished",
+		"mode", r.Mode,
+		"winner", winner,
+		"player_count", len(r.Players),
+		"total_rounds", r.TotalRounds,
+	)
 
 	// Persist results to database
 	if r.Hub != nil {
 		go r.Hub.SaveGameResults(r, ranking)
+		go r.Hub.RemoveRoom(r)
 	}
 }
 

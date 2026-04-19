@@ -8,34 +8,49 @@ A real-time multiplayer vocabulary aim trainer that combines CSGO-style reflex t
 
 | Component | Technology |
 |-----------|-----------|
-| **Backend** | Go 1.22 (Gin + gorilla/websocket) |
+| **Backend** | Go 1.25 (Gin + gorilla/websocket) |
 | **Frontend** | Next.js 15, TypeScript, Tailwind CSS |
 | **Database** | PostgreSQL 16 |
-| **Cache** | Redis 7 |
-| **Infrastructure** | Docker Compose |
+| **Cache / Pub/Sub** | Redis 7 (room registry + cross-instance relay) |
+| **Logging** | `log/slog` (structured JSON/Text) |
+| **Infrastructure** | Docker Compose, Nginx (reverse proxy + LB) |
 
 ## Features
 
 - **Solo Practice** — Word targets spawn at random positions. Read the meaning, click the correct word before time runs out
 - **1v1 Real-time Duel** — WebSocket-powered matchmaking. Both players see the same targets. Fastest and most accurate wins
+- **Battle Royale** — Room-based score race for up to 100 players. Host creates room, shares code, starts when ready
+- **Quiz Types** — Meaning → Word, Word → Meaning, Word → IPA (English), Word → Pinyin (Chinese)
+- **Multi-language** — English (A1–B2, 150+ words with IPA) and Chinese (HSK1–5, 100+ words with Pinyin)
+- **Multi-instance** — Redis Pub/Sub relay enables horizontal scaling. Users on different backend instances can join the same room
+- **Structured Logging** — `log/slog` with JSON output, contextual loggers per subsystem, request ID tracing
 - **Leaderboard** — Global ranking by total score, games played, and best reaction time
-- **Multi-language** — English (general + CSGO callouts) and Chinese (basic → idioms)
 - **Production-ready** — JWT auth, rate limiting, CORS, graceful shutdown, Docker deployment
 
 ## Architecture
 
 ```
-┌──────────────┐     ┌──────────────────────────┐
-│  Next.js     │ WS  │  Go Backend (Gin)        │
-│  Frontend    ├────►│  ├── REST API (auth,vocab)│
-│  (SSR)       │     │  ├── WebSocket Hub        │
-│              │ API │  ├── Game Rooms            │
-│              ├────►│  └── Matchmaker            │
-└──────────────┘     └─────┬──────────┬──────────┘
-                           │          │
-                     ┌─────▼──┐  ┌────▼────┐
-                     │Postgres│  │  Redis   │
-                     └────────┘  └─────────┘
+                  ┌────────────┐
+                  │   Nginx    │    (reverse proxy + load balancer)
+                  └─────┬──────┘
+             ┌──────────┼──────────┐
+             ▼                     ▼
+    ┌──────────────┐     ┌──────────────┐
+    │  Go Backend  │     │  Go Backend  │   (N instances, stateless)
+    │  Instance 1  │     │  Instance 2  │
+    │  node:f28ce3 │     │  node:44319c │
+    └──┬─────┬─────┘     └──┬─────┬─────┘
+       │     │              │     │
+       │     └──────┬───────┘     │
+       │            ▼             │
+       │     ┌──────────┐        │
+       │     │  Redis   │        │   (room registry + Pub/Sub relay)
+       │     └──────────┘        │
+       ▼                         ▼
+    ┌──────────┐          ┌──────────────┐
+    │ Postgres │          │  Next.js     │
+    └──────────┘          │  Frontend    │
+                          └──────────────┘
 ```
 
 ## Quick Start
@@ -53,11 +68,14 @@ git clone <repo-url>
 cd language-arena
 cp .env.example .env
 
-# Start all services
+# Single instance (default)
 docker compose up --build
 
+# Multi-instance (2 backends + nginx load balancer)
+docker compose -f docker-compose.yml -f docker-compose.scale.yml up --build
+
 # Open browser
-open http://localhost:3000
+open http://localhost
 ```
 
 ### Local Development
@@ -68,7 +86,7 @@ docker compose up postgres redis -d
 
 # 2. Run backend
 cd backend
-go run ./cmd/server
+LOG_FORMAT=text go run ./cmd/server
 
 # 3. Run frontend (new terminal)
 cd frontend
@@ -372,27 +390,59 @@ Client                  Hub (hub.go)                    Room (room.go)
 
 ```
 language-arena/
-├── backend/                   # Go backend
-│   ├── cmd/server/main.go     # Entry point
+├── backend/                       # Go backend
+│   ├── cmd/server/main.go         # Entry point, router, migrations
 │   ├── internal/
-│   │   ├── config/            # Environment config
-│   │   ├── model/             # Domain models
-│   │   ├── repository/        # Data access (PostgreSQL)
-│   │   ├── service/           # Business logic
-│   │   ├── handler/           # HTTP handlers
-│   │   ├── ws/                # WebSocket game engine
-│   │   ├── middleware/        # Auth, CORS, rate limit
-│   │   └── migration/         # SQL migrations + seed
-│   └── pkg/                   # Shared utilities
-├── frontend/                  # Next.js frontend
-│   ├── src/
-│   │   ├── app/               # Pages (App Router)
-│   │   ├── components/        # UI + Game components
-│   │   ├── hooks/             # useAuth, useWebSocket, useGame
-│   │   └── lib/               # API client
-├── docker-compose.yml
+│   │   ├── config/                # Environment config (LOG_LEVEL, LOG_FORMAT, etc.)
+│   │   ├── model/                 # Domain models (game modes, quiz types)
+│   │   ├── repository/            # Data access (PostgreSQL)
+│   │   ├── service/               # Business logic
+│   │   ├── handler/               # HTTP handlers
+│   │   ├── ws/                    # WebSocket game engine
+│   │   │   ├── hub.go             # Central message router
+│   │   │   ├── room.go            # Game loop (rounds, scoring, timer)
+│   │   │   ├── client.go          # WS client (ReadPump/WritePump)
+│   │   │   ├── matchmaker.go      # Duel queue matching
+│   │   │   └── redis_adapter.go   # Cross-instance Pub/Sub relay
+│   │   ├── middleware/            # Auth, CORS, rate limit, request logger
+│   │   └── migration/            # SQL migrations (embedded via go:embed)
+│   └── pkg/
+│       ├── logger/                # slog init (JSON/Text, log level)
+│       └── response/              # HTTP response helpers
+├── frontend/                      # Next.js frontend
+│   └── src/
+│       ├── app/                   # Pages (App Router)
+│       ├── components/            # UI + Game components
+│       ├── hooks/                 # useAuth, useWebSocket, useGame
+│       └── lib/                   # API client
+├── docs/                          # Technical documentation
+├── docker-compose.yml             # Standard deployment
+├── docker-compose.scale.yml       # Multi-instance override (2 backends)
+├── nginx/
+│   ├── default.conf               # Single-instance proxy
+│   └── default.scale.conf         # Upstream pool (multi-instance)
 └── README.md
 ```
+
+## Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `8080` | Backend server port |
+| `DB_URL` | `postgres://lingouser:lingopass@localhost:5432/lingodb?sslmode=disable` | PostgreSQL connection string |
+| `REDIS_URL` | `redis://localhost:6379` | Redis connection (optional — graceful fallback) |
+| `JWT_SECRET` | `dev-secret-change-in-prod` | JWT signing key |
+| `JWT_EXPIRATION` | `24h` | Token expiry |
+| `LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error` |
+| `LOG_FORMAT` | `json` | `json` (production) or `text` (development) |
+| `GIN_MODE` | `debug` | `debug` or `release` |
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [BACKEND_TECHNICAL_VI.md](docs/BACKEND_TECHNICAL_VI.md) | Detailed backend technical documentation (Vietnamese) |
+| [INTERVIEW_QUESTIONS_VI.md](docs/INTERVIEW_QUESTIONS_VI.md) | Interview preparation Q&A (Vietnamese) |
 
 ## License
 

@@ -2,7 +2,7 @@ package ws
 
 import (
 	"encoding/json"
-	"log"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -25,6 +25,10 @@ type Client struct {
 	Send     chan []byte
 	Room     *Room
 	mu       sync.Mutex
+
+	// Proxy support: if set, SendMessage uses this instead of WebSocket
+	RelayFunc func(WSMessage)
+	IsProxy   bool
 }
 
 func NewClient(hub *Hub, conn *websocket.Conn, userID uuid.UUID, username string) *Client {
@@ -54,7 +58,7 @@ func (c *Client) ReadPump() {
 		_, message, err := c.Conn.ReadMessage()
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseNormalClosure) {
-				log.Printf("ws read error: %v", err)
+				slog.Warn("ws read error", "component", "WS", "user_id", c.ID, "player", c.Username, "err", err)
 			}
 			break
 		}
@@ -104,6 +108,10 @@ func (c *Client) WritePump() {
 }
 
 func (c *Client) SendMessage(msg WSMessage) {
+	if c.RelayFunc != nil {
+		c.RelayFunc(msg)
+		return
+	}
 	data, err := json.Marshal(msg)
 	if err != nil {
 		return
@@ -111,7 +119,7 @@ func (c *Client) SendMessage(msg WSMessage) {
 	select {
 	case c.Send <- data:
 	default:
-		log.Printf("client %s send buffer full, dropping message", c.ID)
+		slog.Warn("client send buffer full", "component", "WS", "user_id", c.ID, "player", c.Username)
 	}
 }
 

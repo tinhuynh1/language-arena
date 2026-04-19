@@ -17,6 +17,8 @@ type ServerConfig struct {
 	Port         string
 	ReadTimeout  time.Duration
 	WriteTimeout time.Duration
+	LogLevel     string
+	LogFormat    string
 }
 
 type DatabaseConfig struct {
@@ -41,6 +43,8 @@ func Load() *Config {
 			Port:         getEnv("PORT", "8080"),
 			ReadTimeout:  getDurationEnv("READ_TIMEOUT", 10*time.Second),
 			WriteTimeout: getDurationEnv("WRITE_TIMEOUT", 10*time.Second),
+			LogLevel:     getEnv("LOG_LEVEL", "info"),
+			LogFormat:    getEnv("LOG_FORMAT", "json"),
 		},
 		Database: DatabaseConfig{
 			URL:             getEnv("DB_URL", "postgres://lingouser:lingopass@localhost:5432/lingodb?sslmode=disable"),

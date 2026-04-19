@@ -16,8 +16,6 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    ports:
-      - "8080:8080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -25,9 +23,11 @@ services:
         condition: service_started
     environment:
       - PORT=8080
-      - DB_URL=postgres://lingouser:lingopass@postgres:5432/lingodb?sslmode=disable
-      - REDIS_URL=redis://redis:6379
+      - DB_URL=${DB_URL:-postgres://lingouser:lingopass@postgres:5432/lingodb?sslmode=disable}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
       - JWT_SECRET=${JWT_SECRET:-super-secret-jwt-key-change-in-production}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
       - GIN_MODE=release
     restart: unless-stopped
     networks:
@@ -37,8 +37,6 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    ports:
-      - "3000:3000"
     depends_on:
       - backend
     restart: unless-stopped
@@ -50,13 +48,11 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     environment:
-      POSTGRES_DB: lingodb
-      POSTGRES_USER: lingouser
-      POSTGRES_PASSWORD: lingopass
-    ports:
-      - "5432:5432"
+      POSTGRES_DB: ${POSTGRES_DB:-lingodb}
+      POSTGRES_USER: ${POSTGRES_USER:-lingouser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lingopass}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U lingouser -d lingodb"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-lingouser} -d ${POSTGRES_DB:-lingodb}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -66,8 +62,6 @@ services:
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
     volumes:
       - redisdata:/data
     restart: unless-stopped

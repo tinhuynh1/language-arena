@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -22,14 +22,19 @@ import (
 	"github.com/michael/language-arena/backend/internal/repository"
 	"github.com/michael/language-arena/backend/internal/service"
 	"github.com/michael/language-arena/backend/internal/ws"
+	"github.com/michael/language-arena/backend/pkg/logger"
 )
 
 func main() {
 	cfg := config.Load()
 
+	logger.Init(cfg.Server.LogLevel, cfg.Server.LogFormat)
+	log := logger.WithComponent("BOOT")
+
 	db, err := sql.Open("postgres", cfg.Database.URL)
 	if err != nil {
-		log.Fatalf("failed to connect to database: %v", err)
+		slog.Error("failed to connect to database", "err", err)
+		os.Exit(1)
 	}
 	defer db.Close()
 
@@ -40,14 +45,16 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := db.PingContext(ctx); err != nil {
-		log.Fatalf("database ping failed: %v", err)
+		slog.Error("database ping failed", "err", err)
+		os.Exit(1)
 	}
-	log.Println("✅ Database connected")
+	log.Info("database connected")
 
-	if err := runMigrations(db); err != nil {
-		log.Fatalf("migration failed: %v", err)
+	if err := runMigrations(db, log); err != nil {
+		slog.Error("migration failed", "err", err)
+		os.Exit(1)
 	}
-	log.Println("✅ Migrations applied")
+	log.Info("migrations applied")
 
 	userRepo := repository.NewUserRepository(db)
 	vocabRepo := repository.NewVocabRepository(db)
@@ -57,7 +64,19 @@ func main() {
 	vocabService := service.NewVocabService(vocabRepo)
 	leaderboardService := service.NewLeaderboardService(userRepo, gameRepo)
 
-	hub := ws.NewHub(vocabService, gameRepo, userRepo)
+	// Initialize Redis adapter (optional — gracefully degrade to single-instance)
+	var redisAdapter *ws.RedisAdapter
+	if cfg.Redis.URL != "" {
+		ra, err := ws.NewRedisAdapter(cfg.Redis.URL)
+		if err != nil {
+			log.Warn("redis unavailable, running single-instance mode", "err", err)
+		} else {
+			redisAdapter = ra
+			defer ra.Close()
+		}
+	}
+
+	hub := ws.NewHub(vocabService, gameRepo, userRepo, redisAdapter)
 	go hub.Run()
 
 	authHandler := handler.NewAuthHandler(authService)
@@ -75,24 +94,26 @@ func main() {
 	}
 
 	go func() {
-		log.Printf("🚀 Server starting on port %s", cfg.Server.Port)
+		log.Info("server starting", "port", cfg.Server.Port)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("server error: %v", err)
+			slog.Error("server error", "err", err)
+			os.Exit(1)
 		}
 	}()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	log.Println("🛑 Shutting down server...")
+	log.Info("shutting down server")
 
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer shutdownCancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil {
-		log.Fatalf("server forced to shutdown: %v", err)
+		slog.Error("server forced to shutdown", "err", err)
+		os.Exit(1)
 	}
 
-	log.Println("✅ Server exited gracefully")
+	log.Info("server exited gracefully")
 }
 
 func setupRouter(
@@ -103,16 +124,18 @@ func setupRouter(
 	leaderboardHandler *handler.LeaderboardHandler,
 	gameHandler *handler.GameHandler,
 ) *gin.Engine {
-	r := gin.Default()
-
+	r := gin.New()
+	r.Use(gin.Recovery())
+	r.Use(middleware.RequestID())
+	r.Use(middleware.RequestLogger())
 	r.Use(middleware.CORSMiddleware())
-
-	rateLimiter := middleware.NewRateLimiter(100, time.Minute)
-	r.Use(rateLimiter.Middleware())
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok", "timestamp": time.Now().Unix()})
 	})
+
+	rateLimiter := middleware.NewRateLimiter(200, time.Minute) // Increased limit just in case
+	r.Use(rateLimiter.Middleware())
 
 	api := r.Group("/api/v1")
 	{
@@ -141,7 +164,7 @@ func setupRouter(
 	return r
 }
 
-func runMigrations(db *sql.DB) error {
+func runMigrations(db *sql.DB, log *slog.Logger) error {
 	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS schema_migrations (
 		name VARCHAR(255) PRIMARY KEY,
 		applied_at TIMESTAMPTZ DEFAULT NOW()
@@ -183,7 +206,7 @@ func runMigrations(db *sql.DB) error {
 		if _, err := db.Exec(`INSERT INTO schema_migrations (name) VALUES ($1)`, name); err != nil {
 			return fmt.Errorf("failed to record migration %s: %w", name, err)
 		}
-		log.Printf("  applied: %s", name)
+		log.Info("migration applied", "file", name)
 	}
 
 	return nil

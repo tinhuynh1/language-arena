@@ -1,7 +1,7 @@
 package handler
 
 import (
-	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -54,7 +54,7 @@ func (h *GameHandler) HandleWebSocket(c *gin.Context) {
 
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		log.Printf("ws upgrade error: %v", err)
+		slog.Error("ws upgrade error", "component", "WS", "err", err, "user_id", userID)
 		return
 	}
 
