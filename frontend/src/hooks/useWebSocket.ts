@@ -7,7 +7,7 @@ export type WSMessageType =
   | 'join_queue' | 'create_room' | 'join_room' | 'start_game' | 'ready' | 'target_hit' | 'leave_room'
   | 'queue_joined' | 'match_found' | 'room_created' | 'player_joined' | 'player_left'
   | 'countdown' | 'round_start' | 'score_update' | 'live_leaderboard'
-  | 'round_end' | 'game_over' | 'opponent_left' | 'error';
+  | 'round_end' | 'game_over' | 'opponent_left' | 'host_changed' | 'error';
 
 export interface WSMessage {
   type: WSMessageType;
@@ -73,6 +73,8 @@ export interface MatchFoundData {
   opponent: string;
   player_count: number;
   mode: string;
+  is_host: boolean;
+  host: string;
 }
 
 export interface RoomCreatedData {
@@ -86,6 +88,11 @@ export interface PlayerJoinedData {
   username: string;
   player_count: number;
   players: string[];
+  host: string;
+}
+
+export interface HostChangedData {
+  new_host: string;
 }
 
 type MessageHandler = (msg: WSMessage) => void;

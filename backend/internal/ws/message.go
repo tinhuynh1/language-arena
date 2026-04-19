@@ -27,6 +27,7 @@ const (
 	MsgRoundEnd        MessageType = "round_end"
 	MsgGameOver        MessageType = "game_over"
 	MsgOpponentLeft    MessageType = "opponent_left"
+	MsgHostChanged     MessageType = "host_changed"
 	MsgError           MessageType = "error"
 )
 
@@ -58,10 +59,12 @@ type TargetHitData struct {
 }
 
 type MatchFoundData struct {
-	RoomID       string `json:"room_id"`
-	Opponent     string `json:"opponent"`
-	PlayerCount  int    `json:"player_count"`
-	Mode         string `json:"mode"`
+	RoomID      string `json:"room_id"`
+	Opponent    string `json:"opponent"`
+	PlayerCount int    `json:"player_count"`
+	Mode        string `json:"mode"`
+	IsHost      bool   `json:"is_host"`
+	Host        string `json:"host"`
 }
 
 type RoomCreatedData struct {
@@ -72,9 +75,14 @@ type RoomCreatedData struct {
 }
 
 type PlayerJoinedData struct {
-	Username    string `json:"username"`
-	PlayerCount int    `json:"player_count"`
+	Username    string   `json:"username"`
+	PlayerCount int      `json:"player_count"`
 	Players     []string `json:"players"`
+	Host        string   `json:"host"`
+}
+
+type HostChangedData struct {
+	NewHost string `json:"new_host"`
 }
 
 type Target struct {

@@ -240,6 +240,8 @@ func (h *Hub) handleJoinRoom(client *Client, msg WSMessage) {
 				RoomID:      room.ID,
 				PlayerCount: len(room.Players),
 				Mode:        string(room.Mode),
+				IsHost:      client.ID == room.HostID,
+				Host:        room.GetHostUsername(),
 			},
 		})
 
@@ -250,6 +252,7 @@ func (h *Hub) handleJoinRoom(client *Client, msg WSMessage) {
 				Username:    client.Username,
 				PlayerCount: len(room.Players),
 				Players:     names,
+				Host:        room.GetHostUsername(),
 			},
 		})
 
@@ -491,6 +494,8 @@ func (h *Hub) handleProxyJoin(msg RedisMessage) {
 			RoomID:      room.ID,
 			PlayerCount: len(room.Players),
 			Mode:        string(room.Mode),
+			IsHost:      proxy.ID == room.HostID,
+			Host:        room.GetHostUsername(),
 		},
 	})
 
@@ -502,6 +507,7 @@ func (h *Hub) handleProxyJoin(msg RedisMessage) {
 			Username:    msg.Username,
 			PlayerCount: len(room.Players),
 			Players:     names,
+			Host:        room.GetHostUsername(),
 		},
 	})
 
