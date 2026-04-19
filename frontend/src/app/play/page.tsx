@@ -386,7 +386,7 @@ export default function PlayPage() {
 
         <div className="w-full max-w-lg text-center relative z-10">
           {/* Title */}
-          <div className="animate-fade-in-up mb-6">
+          <div className="motion-safe:animate-fade-in-up mb-6">
             <h1 className="font-heading font-bold text-3xl sm:text-4xl mb-1 uppercase tracking-wider">
               Battle <span className="text-glow-cyan" style={{ color: '#00d4ff' }}>Room</span>
             </h1>
@@ -394,7 +394,7 @@ export default function PlayPage() {
           </div>
 
           {/* Room Code Card */}
-          <div className="mb-6 px-6 py-5 rounded-sm animate-fade-in-up delay-100" style={{
+          <div className="mb-6 px-6 py-5 rounded-sm motion-safe:animate-fade-in-up delay-100" style={{
             background: 'rgba(0, 212, 255, 0.04)',
             border: '1px solid rgba(0, 212, 255, 0.15)',
             backdropFilter: 'blur(8px)',
@@ -415,7 +415,7 @@ export default function PlayPage() {
           </div>
 
           {/* Player List */}
-          <div className="mb-6 px-5 py-4 rounded-sm animate-fade-in-up delay-200" style={{
+          <div className="mb-6 px-5 py-4 rounded-sm motion-safe:animate-fade-in-up delay-200" style={{
             background: 'rgba(255,255,255,0.02)',
             border: '1px solid rgba(255,255,255,0.06)',
           }}>

@@ -51,24 +51,23 @@ export default function LeaderboardPage() {
       }} />
 
       {/* Ambient orbs */}
-      <div className="orb w-[500px] h-[500px] opacity-[0.05] animate-float"
+      <div className="orb w-[500px] h-[500px] opacity-[0.05] motion-safe:animate-float"
            style={{ background: '#ffd700', top: '-10%', right: '-10%' }} />
-      <div className="orb w-[400px] h-[400px] opacity-[0.03] animate-float"
+      <div className="orb w-[400px] h-[400px] opacity-[0.03] motion-safe:animate-float"
            style={{ background: '#00d4ff', bottom: '-5%', left: '-10%', animationDelay: '-4s' }} />
 
       {/* Scanline overlay */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-[2]" style={{ opacity: 0.015 }}>
-        <div style={{
+        <div className="motion-safe:animate-[scanline_10s_linear_infinite]" style={{
           width: '100%',
           height: '200%',
-          backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,136,0.4) 2px, rgba(0,255,136,0.4) 4px)',
-          animation: 'scanline 10s linear infinite',
+          backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,136,0.4) 2px, rgba(0,255,136,0.4) 4px)'
         }} />
       </div>
 
       <div className="relative z-10 max-w-4xl mx-auto">
         {/* Header */}
-        <div className="text-center mb-14 animate-fade-in-up">
+        <div className="text-center mb-14 motion-safe:animate-fade-in-up">
           <div className="inline-block px-3 py-1 mb-4 text-[10px] font-heading uppercase tracking-[0.3em] rounded-sm"
                style={{ background: 'rgba(0,212,255,0.1)', color: '#00d4ff', border: '1px solid rgba(0,212,255,0.2)' }}>
             Global Rankings
@@ -95,7 +94,7 @@ export default function LeaderboardPage() {
           <div className="relative z-10">
             {/* Podium — top 3 */}
             {top3.length > 0 && (
-              <div className="grid grid-cols-3 gap-3 sm:gap-6 mb-12 animate-fade-in-up delay-100 items-end px-2 sm:px-10" aria-label="Top 3 players">
+              <div className="grid grid-cols-3 gap-3 sm:gap-6 mb-12 motion-safe:animate-fade-in-up delay-100 items-end px-2 sm:px-10" aria-label="Top 3 players">
                 {[
                   /* reorder: 2nd, 1st, 3rd */
                   top3[1] ?? null,
@@ -184,7 +183,7 @@ export default function LeaderboardPage() {
                 <div
                   key={entry.user_id}
                   role="row"
-                  className="grid grid-cols-12 gap-3 items-center px-5 py-3.5 animate-fade-in-up transition-all hover:scale-[1.01] hover:bg-[rgba(255,255,255,0.03)] group"
+                  className="grid grid-cols-12 gap-3 items-center px-5 py-3.5 motion-safe:animate-fade-in-up transition-all hover:scale-[1.01] hover:bg-[rgba(255,255,255,0.03)] group"
                   style={{ 
                     animationDelay: `${i * 0.04}s`,
                     background: 'rgba(255,255,255,0.01)',

@@ -43,7 +43,7 @@ function Particles() {
       {particles.map(p => (
         <div
           key={p.id}
-          className="absolute rounded-full"
+          className="absolute rounded-full motion-reduce:!animate-none"
           style={{
             left: `${p.x}%`,
             top: `${p.y}%`,
@@ -174,11 +174,10 @@ export default function GameCanvas({
 
       {/* Scanline effect */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-[2]" style={{ opacity: 0.015 }}>
-        <div style={{
+        <div className="motion-safe:animate-[scanline_6s_linear_infinite]" style={{
           width: '100%',
           height: '200%',
-          backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,136,0.4) 2px, rgba(0,255,136,0.4) 4px)',
-          animation: 'scanline 6s linear infinite',
+          backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,136,0.4) 2px, rgba(0,255,136,0.4) 4px)'
         }} />
       </div>
 
