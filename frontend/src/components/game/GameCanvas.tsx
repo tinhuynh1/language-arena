@@ -309,19 +309,21 @@ export default function GameCanvas({
           </div>
         </div>
 
-        {/* Reaction time badge */}
+        {/* Reaction time badge — below question, centered */}
         {lastReactionMs > 0 && (
-          <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full" style={{
-            background: lastReactionMs < 1000 ? 'rgba(0,255,136,0.1)' : lastReactionMs < 2000 ? 'rgba(255,215,0,0.1)' : 'rgba(255,53,72,0.1)',
-            border: `1px solid ${lastReactionMs < 1000 ? 'rgba(0,255,136,0.2)' : lastReactionMs < 2000 ? 'rgba(255,215,0,0.2)' : 'rgba(255,53,72,0.2)'}`,
-          }}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={lastReactionMs < 1000 ? '#00ff88' : lastReactionMs < 2000 ? '#ffd700' : '#ff3548'} strokeWidth="2">
-              <circle cx="12" cy="12" r="10" />
-              <polyline points="12 6 12 12 16 14" />
-            </svg>
-            <span className="font-mono text-sm font-bold" style={{ color: lastReactionMs < 1000 ? '#00ff88' : lastReactionMs < 2000 ? '#ffd700' : '#ff3548' }}>
-              {lastReactionMs}ms
-            </span>
+          <div className="flex justify-center mt-3">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full" style={{
+              background: lastReactionMs < 1000 ? 'rgba(0,255,136,0.1)' : lastReactionMs < 2000 ? 'rgba(255,215,0,0.1)' : 'rgba(255,53,72,0.1)',
+              border: `1px solid ${lastReactionMs < 1000 ? 'rgba(0,255,136,0.2)' : lastReactionMs < 2000 ? 'rgba(255,215,0,0.2)' : 'rgba(255,53,72,0.2)'}`,
+            }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={lastReactionMs < 1000 ? '#00ff88' : lastReactionMs < 2000 ? '#ffd700' : '#ff3548'} strokeWidth="2">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              <span className="font-mono text-sm font-bold" style={{ color: lastReactionMs < 1000 ? '#00ff88' : lastReactionMs < 2000 ? '#ffd700' : '#ff3548' }}>
+                {lastReactionMs}ms
+              </span>
+            </div>
           </div>
         )}
       </div>
