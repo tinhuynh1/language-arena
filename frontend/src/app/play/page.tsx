@@ -175,11 +175,10 @@ export default function PlayPage() {
                 <button
                   key={l.value}
                   onClick={() => setSelectedLevel(l.value)}
-                  className={`px-4 py-2 font-heading font-bold text-sm uppercase transition-all border ${
-                    selectedLevel === l.value
+                  className={`px-4 py-2 font-heading font-bold text-sm uppercase transition-all border ${selectedLevel === l.value
                       ? 'border-[var(--color-accent-neon)] text-[var(--color-accent-neon)] bg-[rgba(0,255,136,0.1)]'
                       : 'border-[var(--color-border-default)] text-[var(--color-text-secondary)] hover:border-[var(--color-text-muted)]'
-                  }`}
+                    }`}
                   style={{ borderRadius: '2px' }}
                 >
                   <div>{l.label}</div>
@@ -199,11 +198,10 @@ export default function PlayPage() {
                 <button
                   key={q.value}
                   onClick={() => setSelectedQuizType(q.value)}
-                  className={`px-3 py-2 font-heading font-bold text-sm uppercase transition-all border text-left ${
-                    selectedQuizType === q.value
+                  className={`px-3 py-2 font-heading font-bold text-sm uppercase transition-all border text-left ${selectedQuizType === q.value
                       ? 'border-[var(--color-accent-orange)] text-[var(--color-accent-orange)] bg-[rgba(255,107,53,0.1)]'
                       : 'border-[var(--color-border-default)] text-[var(--color-text-secondary)] hover:border-[var(--color-text-muted)]'
-                  }`}
+                    }`}
                   style={{ borderRadius: '2px' }}
                 >
                   <div>{q.label}</div>
@@ -322,7 +320,7 @@ export default function PlayPage() {
               <div className="flex flex-wrap gap-2">
                 {game.players.map(name => (
                   <span key={name} className="px-2 py-1 text-xs font-heading bg-[var(--color-bg-primary)] border border-[var(--color-border-default)]"
-                        style={{ borderRadius: '2px' }}>
+                    style={{ borderRadius: '2px' }}>
                     {name}
                   </span>
                 ))}
@@ -369,11 +367,10 @@ export default function PlayPage() {
           <button
             onClick={handleReady}
             disabled={readySent}
-            className={`text-lg px-12 py-4 font-heading font-bold uppercase tracking-wider border-2 transition-all ${
-              readySent
+            className={`text-lg px-12 py-4 font-heading font-bold uppercase tracking-wider border-2 transition-all ${readySent
                 ? 'border-[var(--color-accent-neon)] text-[var(--color-accent-neon)] bg-[rgba(0,255,136,0.1)] opacity-80 cursor-not-allowed'
                 : 'btn-primary'
-            }`}
+              }`}
             style={{ borderRadius: '2px' }}
           >
             {readySent ? '✓ WAITING...' : 'READY'}
@@ -390,7 +387,7 @@ export default function PlayPage() {
 
   // Countdown
   if (game.state === 'countdown') {
-    return <Countdown ms={game.countdownMs} onComplete={() => {}} />;
+    return <Countdown ms={game.countdownMs} onComplete={() => { }} />;
   }
 
   // Playing

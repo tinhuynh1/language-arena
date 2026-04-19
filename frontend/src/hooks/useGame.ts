@@ -184,19 +184,28 @@ export function useGame() {
   const joinGame = useCallback((mode: 'solo' | 'duel', language: string, level: string, quizType: QuizType) => {
     ws.connect();
     updateStore({ ...initialStore, mode, language, level, quizType, state: 'queuing' });
-    ws.send({ type: 'join_queue', data: { mode, language, level, quiz_type: quizType } });
+
+    setTimeout(() => {
+      ws.send({ type: 'join_queue', data: { mode, language, level, quiz_type: quizType } });
+    }, 500);
   }, [ws, updateStore]);
 
   const createRoom = useCallback((language: string, level: string, quizType: QuizType) => {
     ws.connect();
     updateStore({ ...initialStore, mode: 'battle', language, level, quizType, state: 'creating_room' });
-    ws.send({ type: 'create_room', data: { language, level, quiz_type: quizType } });
+
+    setTimeout(() => {
+      ws.send({ type: 'create_room', data: { language, level, quiz_type: quizType } });
+    }, 500);
   }, [ws, updateStore]);
 
   const joinRoom = useCallback((roomCode: string) => {
     ws.connect();
     updateStore({ ...initialStore, mode: 'battle', state: 'queuing', roomCode });
-    ws.send({ type: 'join_room', data: { room_code: roomCode } });
+
+    setTimeout(() => {
+      ws.send({ type: 'join_room', data: { room_code: roomCode } });
+    }, 500);
   }, [ws, updateStore]);
 
   const startGame = useCallback(() => {
