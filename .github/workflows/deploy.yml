@@ -12,11 +12,11 @@ env:
   REPOSITORY: lingo-sniper
   CLUSTER_NAME: lingo-sniper-cluster
   # Tên Github Repo của bạn (Ví dụ: user/repo)
-  GITHUB_REPO: michael/language-arena
+  GITHUB_REPO: tinhuynh1/language-arena
   
   # === BẠN CẦN THAY THẾ (CẬP NHẬT) BIẾN NÀY SAU KHI CHẠY SCRIPT WIF ===
   # Định dạng: projects/123456789/locations/global/workloadIdentityPools/github-pool/providers/github-provider
-  WORKLOAD_IDENTITY_PROVIDER: 'projects/YOUR_PROJECT_NUMBER/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
+  WORKLOAD_IDENTITY_PROVIDER: 'projects/696260201579/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
   
   # === BẠN CẦN THAY THẾ (CẬP NHẬT) BIẾN NÀY DƯỚI DẠNG SECRET TRONG GITHUB ===
   # Nhưng tạm thời chúng ta hardcode email vào đây để tiện demo
