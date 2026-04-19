@@ -30,3 +30,15 @@ redisdata/
 
 # Logs
 *.log
+
+# Agent config (AI workspace rules - không cần trên remote)
+.agent/
+
+# Docs (tài liệu cá nhân, không public)
+docs/
+
+# Scale config (local testing only)
+docker-compose.scale.yml
+
+# K8s secrets template (chứa placeholder, secret thật tạo bằng kubectl)
+k8s/secrets.yaml
