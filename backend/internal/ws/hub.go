@@ -225,7 +225,12 @@ func (h *Hub) handleJoinRoom(client *Client, msg WSMessage) {
 	if ok {
 		// Room is on this instance — join directly
 		if !room.AddPlayer(client) {
-			client.SendMessage(WSMessage{Type: MsgError, Data: "room is full or game started"})
+			// Distinguish why join failed
+			errMsg := "room is full"
+			if room.State != StateWaiting {
+				errMsg = "game already started"
+			}
+			client.SendMessage(WSMessage{Type: MsgError, Data: errMsg})
 			return
 		}
 
@@ -389,6 +394,14 @@ func splitProxyKey(key string) []string {
 	return []string{key}
 }
 
+func mustMarshal(v interface{}) json.RawMessage {
+	data, err := json.Marshal(v)
+	if err != nil {
+		return json.RawMessage(`{}`)
+	}
+	return data
+}
+
 // HandleRedisMessage processes messages from other instances via Redis Pub/Sub.
 func (h *Hub) HandleRedisMessage(msg RedisMessage) {
 	switch msg.Type {
@@ -450,6 +463,18 @@ func (h *Hub) handleProxyJoin(msg RedisMessage) {
 	}
 
 	if !room.AddPlayer(proxy) {
+		// Relay error back to the joiner's node
+		errMsg := "room is full"
+		if room.State != StateWaiting {
+			errMsg = "game already started"
+		}
+		h.Redis.PublishToNode(fromNode, RedisMessage{
+			Type:      RedisRelayWS,
+			FromNode:  h.Redis.NodeID,
+			RoomCode:  roomCode,
+			UserID:    proxyUserID,
+			WSMessage: mustMarshal(WSMessage{Type: MsgError, Data: errMsg}),
+		})
 		h.log.Warn("proxy_join: room full or started", "room_code", msg.RoomCode)
 		return
 	}

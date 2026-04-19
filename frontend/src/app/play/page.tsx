@@ -163,6 +163,17 @@ export default function PlayPage() {
             <p className="text-[var(--color-text-secondary)] mb-8 sm:mb-10 text-sm sm:text-base">
               Choose your mode, language, and difficulty level
             </p>
+            {/* Error toast */}
+            {game.errorMessage && (
+              <div className="mb-6 px-4 py-3 rounded-sm border border-[var(--color-accent-red)] bg-[rgba(255,53,72,0.08)] text-[var(--color-accent-red)] font-heading text-sm uppercase tracking-wider animate-fade-in-up flex items-center justify-center gap-2">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                {game.errorMessage}
+              </div>
+            )}
           </div>
 
           {/* Mode Selection */}
