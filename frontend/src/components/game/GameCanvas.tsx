@@ -117,8 +117,11 @@ export default function GameCanvas({
     };
   }, [round, timeMs]);
 
+
+  const isTimeUp = timeLeft <= 0;
+
   const handleTargetClick = useCallback((target: Target, e: React.MouseEvent) => {
-    if (answered) return;
+    if (answered || isTimeUp) return;
 
     const reactionMs = onHit(target.id);
 
@@ -134,7 +137,7 @@ export default function GameCanvas({
     });
 
     setTimeout(() => setShowPopup(null), 800);
-  }, [hitTargets, onHit, timeMs]);
+  }, [hitTargets, onHit, timeMs, isTimeUp]);
 
   const timePercent = (timeLeft / timeMs) * 100;
   const timeColor = timePercent > 50 ? '#00ff88' : timePercent > 25 ? '#ffd700' : '#ff3548';
@@ -331,7 +334,7 @@ export default function GameCanvas({
             <button
               key={target.id}
               onClick={(e) => handleTargetClick(target, e)}
-              disabled={answered}
+              disabled={answered || isTimeUp}
               className={`absolute transition-all duration-200 group
                 ${isHit
                   ? 'target-hit opacity-0 pointer-events-none'
