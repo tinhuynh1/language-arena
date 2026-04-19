@@ -337,7 +337,7 @@ export default function GameCanvas({
               key={target.id}
               onClick={(e) => handleTargetClick(target, e)}
               disabled={answered || isTimeUp}
-              className={`absolute transition-all duration-200 group
+              className={`absolute transition-all duration-200 group focus-visible:ring-2 focus-visible:ring-[#00ff88] focus-visible:outline-none rounded-sm
                 ${isHit
                   ? 'target-hit opacity-0 pointer-events-none'
                   : 'target-spawn cursor-crosshair'
