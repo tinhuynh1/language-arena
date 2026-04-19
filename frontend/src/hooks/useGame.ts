@@ -40,6 +40,7 @@ interface GameStore {
   lastReactionMs: number;
   gameOverData: GameOverData | null;
   liveLeaderboard: LeaderboardPlayer[];
+  errorMessage: string;
 }
 
 const initialStore: GameStore = {
@@ -64,6 +65,7 @@ const initialStore: GameStore = {
   lastReactionMs: 0,
   gameOverData: null,
   liveLeaderboard: [],
+  errorMessage: '',
 };
 
 export function useGame() {
@@ -172,9 +174,13 @@ export function useGame() {
           updateStore({ state: 'game_over', gameOverData: null });
           break;
 
-        case 'error':
-          console.error('[Game] Error:', msg.data);
+        case 'error': {
+          const errorStr = typeof msg.data === 'string' ? msg.data : 'Unknown error';
+          console.error('[Game] Error:', errorStr);
+          // Reset to idle so the user can try again
+          updateStore({ state: 'idle', errorMessage: errorStr });
           break;
+        }
       }
     });
 
@@ -183,7 +189,7 @@ export function useGame() {
 
   const joinGame = useCallback((mode: 'solo' | 'duel', language: string, level: string, quizType: QuizType) => {
     ws.connect();
-    updateStore({ ...initialStore, mode, language, level, quizType, state: 'queuing' });
+    updateStore({ ...initialStore, mode, language, level, quizType, state: 'queuing', errorMessage: '' });
 
     setTimeout(() => {
       ws.send({ type: 'join_queue', data: { mode, language, level, quiz_type: quizType } });
@@ -192,7 +198,7 @@ export function useGame() {
 
   const createRoom = useCallback((language: string, level: string, quizType: QuizType) => {
     ws.connect();
-    updateStore({ ...initialStore, mode: 'battle', language, level, quizType, state: 'creating_room' });
+    updateStore({ ...initialStore, mode: 'battle', language, level, quizType, state: 'creating_room', errorMessage: '' });
 
     setTimeout(() => {
       ws.send({ type: 'create_room', data: { language, level, quiz_type: quizType } });
@@ -201,7 +207,7 @@ export function useGame() {
 
   const joinRoom = useCallback((roomCode: string) => {
     ws.connect();
-    updateStore({ ...initialStore, mode: 'battle', state: 'queuing', roomCode });
+    updateStore({ ...initialStore, mode: 'battle', state: 'queuing', roomCode, errorMessage: '' });
 
     setTimeout(() => {
       ws.send({ type: 'join_room', data: { room_code: roomCode } });
