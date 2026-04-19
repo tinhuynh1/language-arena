@@ -9,7 +9,6 @@ resources:
   - frontend/deployment.yaml
   - frontend/service.yaml
   - redis/deployment.yaml
-  - redis/service.yaml
   - ingress.yaml
   - cluster-issuer.yaml
 
