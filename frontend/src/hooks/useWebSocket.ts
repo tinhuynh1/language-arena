@@ -90,40 +90,75 @@ export interface PlayerJoinedData {
 
 type MessageHandler = (msg: WSMessage) => void;
 
+const MAX_RECONNECT_ATTEMPTS = 3;
+const RECONNECT_DELAY_MS = 2000;
+
 export function useWebSocket() {
   const wsRef = useRef<WebSocket | null>(null);
   const [connected, setConnected] = useState(false);
   const handlersRef = useRef<Set<MessageHandler>>(new Set());
-
   const msgQueue = useRef<WSMessage[]>([]);
+  const reconnectAttempts = useRef(0);
+  const reconnectTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const intentionalClose = useRef(false);
 
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN || wsRef.current?.readyState === WebSocket.CONNECTING) return;
 
-    const ws = new WebSocket(getWsUrl());
+    intentionalClose.current = false;
+    const url = getWsUrl();
+    console.log('[WS] Connecting to:', url.replace(/token=.*/, 'token=***'));
+
+    const ws = new WebSocket(url);
     wsRef.current = ws;
 
+    // Connection timeout: if WS doesn't open within 8s, force reconnect
+    const connectTimeout = setTimeout(() => {
+      if (ws.readyState !== WebSocket.OPEN) {
+        console.warn('[WS] Connection timeout, retrying...');
+        ws.close();
+      }
+    }, 8000);
+
     ws.onopen = () => {
+      clearTimeout(connectTimeout);
       setConnected(true);
+      reconnectAttempts.current = 0;
       console.log('[WS] Connected');
+
+      // Flush queued messages
       while (msgQueue.current.length > 0) {
         const msg = msgQueue.current.shift();
-        if (msg) ws.send(JSON.stringify(msg));
+        if (msg) {
+          console.log('[WS] Sending queued msg:', msg.type);
+          ws.send(JSON.stringify(msg));
+        }
       }
     };
 
     ws.onmessage = (event) => {
       try {
         const msg: WSMessage = JSON.parse(event.data);
+        console.log('[WS] Received:', msg.type);
         handlersRef.current.forEach(handler => handler(msg));
       } catch (err) {
         console.error('[WS] Parse error:', err);
       }
     };
 
-    ws.onclose = () => {
+    ws.onclose = (event) => {
+      clearTimeout(connectTimeout);
       setConnected(false);
-      console.log('[WS] Disconnected');
+      console.log('[WS] Disconnected, code:', event.code, 'reason:', event.reason);
+
+      // Auto-reconnect if not intentionally closed and has queued messages
+      if (!intentionalClose.current && msgQueue.current.length > 0 && reconnectAttempts.current < MAX_RECONNECT_ATTEMPTS) {
+        reconnectAttempts.current++;
+        console.log(`[WS] Reconnecting (attempt ${reconnectAttempts.current}/${MAX_RECONNECT_ATTEMPTS})...`);
+        reconnectTimer.current = setTimeout(() => {
+          connect();
+        }, RECONNECT_DELAY_MS);
+      }
     };
 
     ws.onerror = (err) => {
@@ -132,6 +167,10 @@ export function useWebSocket() {
   }, []);
 
   const disconnect = useCallback(() => {
+    intentionalClose.current = true;
+    clearTimeout(reconnectTimer.current);
+    reconnectAttempts.current = 0;
+    msgQueue.current = [];
     wsRef.current?.close();
     wsRef.current = null;
     setConnected(false);
@@ -139,8 +178,10 @@ export function useWebSocket() {
 
   const send = useCallback((msg: WSMessage) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
+      console.log('[WS] Sending:', msg.type);
       wsRef.current.send(JSON.stringify(msg));
     } else {
+      console.log('[WS] Queued:', msg.type);
       msgQueue.current.push(msg);
     }
   }, []);
