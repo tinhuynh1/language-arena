@@ -89,73 +89,80 @@ export default function GameCanvas({
   const timeColor = timePercent > 50 ? '#00ff88' : timePercent > 25 ? '#ffd700' : '#ff3548';
 
   return (
-    <div className="relative w-full h-full min-h-[400px] sm:min-h-[500px] crosshair-cursor select-none overflow-hidden">
+    <div className="relative w-full h-full min-h-[400px] sm:min-h-[500px] crosshair-cursor select-none overflow-hidden vignette">
       {/* HUD Top Bar */}
-      <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-3 sm:px-6 py-2 sm:py-3"
-           style={{ background: 'linear-gradient(180deg, rgba(10,14,23,0.95) 0%, transparent 100%)' }}>
+      <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4 sm:px-8 py-3 sm:py-4"
+           style={{ background: 'linear-gradient(180deg, rgba(8,12,20,0.97) 0%, rgba(8,12,20,0.7) 70%, transparent 100%)' }}>
         {/* Score P1 */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          <div className="text-xs sm:text-sm text-[var(--color-text-secondary)] font-heading uppercase tracking-wider">You</div>
-          <div className="text-xl sm:text-3xl font-heading font-bold text-glow" style={{ color: '#00ff88' }}>{myScore}</div>
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="text-sm sm:text-base text-[var(--color-text-secondary)] font-heading uppercase tracking-wider">You</div>
+          <div className="text-2xl sm:text-4xl font-heading font-bold text-glow" style={{ color: '#00ff88' }}>{myScore}</div>
         </div>
 
         {/* Round info */}
         <div className="text-center">
-          <div className="text-[10px] sm:text-xs text-[var(--color-text-muted)] font-heading uppercase tracking-widest">Round</div>
-          <div className="text-lg sm:text-2xl font-heading font-bold">{round}<span className="text-[var(--color-text-muted)]">/{totalRounds}</span></div>
+          <div className="text-xs sm:text-sm text-[var(--color-text-muted)] font-heading uppercase tracking-widest">Round</div>
+          <div className="text-xl sm:text-3xl font-heading font-bold">{round}<span className="text-[var(--color-text-muted)]">/{totalRounds}</span></div>
         </div>
 
         {/* Score P2 / Mode badge */}
         {mode === 'duel' && (
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="text-xl sm:text-3xl font-heading font-bold" style={{ color: '#ff6b35' }}>{opponentScore}</div>
-            <div className="text-xs sm:text-sm text-[var(--color-text-secondary)] font-heading uppercase tracking-wider">{opponent}</div>
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="text-2xl sm:text-4xl font-heading font-bold" style={{ color: '#ff6b35' }}>{opponentScore}</div>
+            <div className="text-sm sm:text-base text-[var(--color-text-secondary)] font-heading uppercase tracking-wider">{opponent}</div>
           </div>
         )}
         {mode === 'battle' && (
           <div className="flex items-center gap-2">
-            <div className="text-xs sm:text-sm text-[var(--color-text-muted)] font-heading uppercase tracking-wider px-2 sm:px-3 py-1 border border-[var(--color-accent-cyan)] bg-[rgba(0,212,255,0.05)]" style={{ borderRadius: '2px', color: '#00d4ff' }}>
+            <div className="text-sm font-heading uppercase tracking-wider px-3 sm:px-4 py-1.5 border border-[var(--color-accent-cyan)] bg-[rgba(0,212,255,0.05)]" style={{ borderRadius: '3px', color: '#00d4ff' }}>
               BATTLE
             </div>
           </div>
         )}
-        {mode === 'solo' && <div className="w-16 sm:w-24" />}
+        {mode === 'solo' && <div className="w-20 sm:w-28" />}
       </div>
 
       {/* Timer Bar */}
-      <div className="absolute top-12 sm:top-16 left-0 right-0 z-20 h-1 bg-[var(--color-bg-card)]">
+      <div className="absolute top-14 sm:top-[4.5rem] left-0 right-0 z-20 h-1.5 bg-[var(--color-bg-card)]">
         <div
           className="h-full transition-all duration-100 ease-linear"
-          style={{ width: `${timePercent}%`, backgroundColor: timeColor }}
+          style={{
+            width: `${timePercent}%`,
+            backgroundColor: timeColor,
+            boxShadow: timePercent < 25 ? `0 0 12px ${timeColor}80` : undefined,
+          }}
         />
       </div>
 
       {/* Question */}
-      <div className="absolute top-14 sm:top-20 left-1/2 -translate-x-1/2 z-20 text-center">
-        <div className="text-[10px] sm:text-xs text-[var(--color-text-muted)] font-heading uppercase tracking-widest mb-1">{QUIZ_LABELS[quizType]}</div>
-        <div className="text-lg sm:text-2xl font-heading font-bold text-[var(--color-accent-cyan)] px-3 sm:px-4 py-1.5 sm:py-2 border border-[var(--color-accent-cyan)] bg-[rgba(0,212,255,0.05)]"
-             style={{ borderRadius: '2px' }}>
+      <div className="absolute top-16 sm:top-22 left-1/2 -translate-x-1/2 z-20 text-center">
+        <div className="text-xs sm:text-sm text-[var(--color-text-muted)] font-heading uppercase tracking-widest mb-1.5">{QUIZ_LABELS[quizType]}</div>
+        <div className="text-xl sm:text-3xl font-heading font-bold text-[var(--color-accent-cyan)] px-4 sm:px-6 py-2 sm:py-3 border-2 border-[var(--color-accent-cyan)] bg-[rgba(0,212,255,0.06)]"
+             style={{
+               borderRadius: '3px',
+               boxShadow: '0 0 20px rgba(0, 212, 255, 0.15)',
+             }}>
           {question}
         </div>
       </div>
 
       {/* Reaction time */}
       {lastReactionMs > 0 && (
-        <div className="absolute top-28 sm:top-36 left-1/2 -translate-x-1/2 z-20">
-          <span className="font-mono text-xs sm:text-sm" style={{ color: lastReactionMs < 1000 ? '#00ff88' : lastReactionMs < 2000 ? '#ffd700' : '#ff3548' }}>
+        <div className="absolute top-32 sm:top-40 left-1/2 -translate-x-1/2 z-20">
+          <span className="font-mono text-sm sm:text-base font-bold" style={{ color: lastReactionMs < 1000 ? '#00ff88' : lastReactionMs < 2000 ? '#ffd700' : '#ff3548' }}>
             {lastReactionMs}ms
           </span>
         </div>
       )}
 
       {/* Game Area - Targets */}
-      <div className="absolute inset-0 pt-32 sm:pt-40 pb-4">
+      <div className="absolute inset-0 pt-36 sm:pt-44 pb-4">
         {targets.map(target => (
           <button
             key={target.id}
             onClick={(e) => handleTargetClick(target, e)}
             disabled={answered}
-            className={`absolute px-2.5 sm:px-4 py-2 sm:py-3 font-heading font-bold text-sm sm:text-lg border-2 transition-all
+            className={`absolute px-3 sm:px-5 py-2.5 sm:py-3.5 font-heading font-bold text-base sm:text-lg border-2 transition-all
               ${hitTargets.has(target.id)
                 ? 'target-hit opacity-0 pointer-events-none'
                 : 'target-spawn target-pulse hover:scale-110 cursor-crosshair'
@@ -166,13 +173,13 @@ export default function GameCanvas({
               transform: 'translate(-50%, -50%)',
               backgroundColor: hitTargets.has(target.id)
                 ? 'transparent'
-                : 'rgba(26, 35, 50, 0.9)',
+                : 'rgba(16, 24, 40, 0.92)',
               borderColor: hitTargets.has(target.id)
                 ? 'transparent'
                 : '#00ff88',
               color: '#e8ecf1',
-              borderRadius: '2px',
-              minWidth: '60px',
+              borderRadius: '3px',
+              minWidth: '70px',
               textAlign: 'center',
             }}
           >
@@ -184,12 +191,15 @@ export default function GameCanvas({
       {/* Score popup */}
       {showPopup && (
         <div
-          className="fixed z-50 score-popup font-heading font-bold text-xl sm:text-2xl pointer-events-none"
+          className="fixed z-50 score-popup font-heading font-bold text-2xl sm:text-3xl pointer-events-none"
           style={{
             left: showPopup.x,
             top: showPopup.y,
             color: showPopup.correct ? '#00ff88' : '#ff3548',
             transform: 'translateX(-50%)',
+            textShadow: showPopup.correct
+              ? '0 0 16px rgba(0,255,136,0.6)'
+              : '0 0 16px rgba(255,53,72,0.6)',
           }}
         >
           {showPopup.text}
@@ -197,13 +207,13 @@ export default function GameCanvas({
       )}
 
       {/* Grid overlay for HUD feel */}
-      <div className="absolute inset-0 pointer-events-none opacity-5"
+      <div className="absolute inset-0 pointer-events-none opacity-[0.03]"
            style={{
              backgroundImage: `
-               linear-gradient(rgba(0,255,136,0.1) 1px, transparent 1px),
-               linear-gradient(90deg, rgba(0,255,136,0.1) 1px, transparent 1px)
+               linear-gradient(rgba(0,255,136,0.15) 1px, transparent 1px),
+               linear-gradient(90deg, rgba(0,255,136,0.15) 1px, transparent 1px)
              `,
-             backgroundSize: '40px 40px',
+             backgroundSize: '50px 50px',
            }}
       />
     </div>

@@ -26,117 +26,159 @@ export default function Countdown({ ms, onComplete }: CountdownProps) {
   }, [count, onComplete]);
 
   const progress = count / totalSeconds;
-  const circumference = 2 * Math.PI * 90;
-  const strokeOffset = circumference * (1 - progress);
-
-  const getColor = () => {
-    if (count > 2) return '#00ff88';
-    if (count > 1) return '#ffd700';
-    if (count > 0) return '#ff3548';
-    return '#00d4ff';
-  };
-
-  const color = getColor();
+  const color = '#00ff88';
+  const dimColor = 'rgba(0, 255, 136, 0.15)';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center"
-         style={{ background: 'radial-gradient(ellipse at center, rgba(10,14,23,0.95) 0%, #0a0e17 100%)' }}>
+         style={{ background: 'radial-gradient(ellipse at center, rgba(10,14,23,0.97) 0%, #080c14 100%)' }}>
 
-      {/* Ambient glow */}
+      {/* Ambient glow behind scope */}
       <div
         className="absolute rounded-full"
         style={{
-          width: '300px',
-          height: '300px',
-          background: `radial-gradient(circle, ${color}15 0%, transparent 70%)`,
-          filter: 'blur(40px)',
-          transition: 'background 0.3s ease',
+          width: '400px',
+          height: '400px',
+          background: `radial-gradient(circle, ${dimColor} 0%, transparent 70%)`,
+          filter: 'blur(60px)',
+          animation: 'scopePulse 2s ease-in-out infinite',
         }}
       />
 
-      {/* SVG Progress Ring */}
-      <div className="relative" style={{ width: '240px', height: '240px' }}>
-        <svg viewBox="0 0 200 200" className="w-full h-full -rotate-90">
-          {/* Background ring */}
+      {/* Scope Container */}
+      <div className="relative" style={{ width: '320px', height: '320px' }}>
+
+        {/* Outer rotating ring with dashes */}
+        <svg viewBox="0 0 320 320" className="absolute inset-0 w-full h-full" style={{ animation: 'scopeRotate 8s linear infinite' }}>
           <circle
-            cx="100" cy="100" r="90"
-            fill="none"
-            stroke="rgba(255,255,255,0.05)"
-            strokeWidth="4"
-          />
-          {/* Progress ring */}
-          <circle
-            cx="100" cy="100" r="90"
+            cx="160" cy="160" r="150"
             fill="none"
             stroke={color}
-            strokeWidth="4"
+            strokeWidth="1"
+            strokeDasharray="8 12"
+            opacity="0.2"
+          />
+        </svg>
+
+        {/* Progress ring (depleting) */}
+        <svg viewBox="0 0 320 320" className="absolute inset-0 w-full h-full -rotate-90">
+          {/* Background ring */}
+          <circle
+            cx="160" cy="160" r="130"
+            fill="none"
+            stroke="rgba(255,255,255,0.04)"
+            strokeWidth="3"
+          />
+          {/* Active progress */}
+          <circle
+            cx="160" cy="160" r="130"
+            fill="none"
+            stroke={color}
+            strokeWidth="3"
             strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={strokeOffset}
+            strokeDasharray={2 * Math.PI * 130}
+            strokeDashoffset={2 * Math.PI * 130 * (1 - progress)}
             style={{
-              transition: 'stroke-dashoffset 1s linear, stroke 0.3s ease',
-              filter: `drop-shadow(0 0 8px ${color}80)`,
+              transition: 'stroke-dashoffset 1s linear',
+              filter: `drop-shadow(0 0 6px ${color}80)`,
             }}
           />
-          {/* Tick marks */}
-          {Array.from({ length: 12 }).map((_, i) => {
-            const angle = (i * 30 * Math.PI) / 180;
-            const x1 = 100 + 78 * Math.cos(angle);
-            const y1 = 100 + 78 * Math.sin(angle);
-            const x2 = 100 + 84 * Math.cos(angle);
-            const y2 = 100 + 84 * Math.sin(angle);
+        </svg>
+
+        {/* Crosshair lines */}
+        <svg viewBox="0 0 320 320" className="absolute inset-0 w-full h-full" style={{ animation: 'crosshairBlink 2s ease-in-out infinite' }}>
+          {/* Horizontal lines (gap in center) */}
+          <line x1="30" y1="160" x2="120" y2="160" stroke={color} strokeWidth="1" opacity="0.5" />
+          <line x1="200" y1="160" x2="290" y2="160" stroke={color} strokeWidth="1" opacity="0.5" />
+          {/* Vertical lines (gap in center) */}
+          <line x1="160" y1="30" x2="160" y2="120" stroke={color} strokeWidth="1" opacity="0.5" />
+          <line x1="160" y1="200" x2="160" y2="290" stroke={color} strokeWidth="1" opacity="0.5" />
+
+          {/* Small center cross */}
+          <line x1="150" y1="160" x2="170" y2="160" stroke={color} strokeWidth="2" opacity="0.8" />
+          <line x1="160" y1="150" x2="160" y2="170" stroke={color} strokeWidth="2" opacity="0.8" />
+
+          {/* Tick marks at cardinal points */}
+          <line x1="160" y1="30" x2="160" y2="40" stroke={color} strokeWidth="2" opacity="0.4" />
+          <line x1="160" y1="280" x2="160" y2="290" stroke={color} strokeWidth="2" opacity="0.4" />
+          <line x1="30" y1="160" x2="40" y2="160" stroke={color} strokeWidth="2" opacity="0.4" />
+          <line x1="280" y1="160" x2="290" y2="160" stroke={color} strokeWidth="2" opacity="0.4" />
+
+          {/* Diamond markers at 45deg increments */}
+          {[45, 135, 225, 315].map(deg => {
+            const rad = (deg * Math.PI) / 180;
+            const cx = 160 + 110 * Math.cos(rad);
+            const cy = 160 + 110 * Math.sin(rad);
             return (
-              <line
-                key={i}
-                x1={x1} y1={y1} x2={x2} y2={y2}
-                stroke="rgba(255,255,255,0.15)"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
+              <rect key={deg} x={cx - 3} y={cy - 3} width={6} height={6}
+                    fill={color} opacity="0.3"
+                    transform={`rotate(45, ${cx}, ${cy})`} />
             );
           })}
         </svg>
 
-        {/* Number */}
+        {/* Inner scope circle */}
+        <svg viewBox="0 0 320 320" className="absolute inset-0 w-full h-full">
+          <circle
+            cx="160" cy="160" r="80"
+            fill="none"
+            stroke={color}
+            strokeWidth="1"
+            opacity="0.15"
+          />
+          <circle
+            cx="160" cy="160" r="50"
+            fill="none"
+            stroke={color}
+            strokeWidth="1"
+            strokeDasharray="4 8"
+            opacity="0.1"
+          />
+        </svg>
+
+        {/* Number display */}
         <div
           key={animKey}
           className="absolute inset-0 flex flex-col items-center justify-center"
-          style={{ animation: 'countdownPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
+          style={{ animation: 'numberDrop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
         >
           <div
             className="font-heading font-bold leading-none"
             style={{
-              fontSize: count > 0 ? '7rem' : '4rem',
-              color,
-              textShadow: `0 0 30px ${color}60, 0 0 60px ${color}30`,
-              transition: 'color 0.3s ease',
+              fontSize: count > 0 ? '8rem' : '4.5rem',
+              color: count > 0 ? color : '#00d4ff',
+              textShadow: count > 0
+                ? `0 0 40px ${color}50, 0 0 80px ${color}25, 0 0 120px ${color}10`
+                : '0 0 40px rgba(0,212,255,0.5)',
             }}
           >
             {count > 0 ? count : 'GO!'}
           </div>
           {count > 0 && (
-            <div className="text-xs font-heading uppercase tracking-[0.3em] mt-2"
-                 style={{ color: 'rgba(255,255,255,0.3)' }}>
-              GET READY
+            <div
+              className="text-xs font-heading uppercase mt-4 font-bold"
+              style={{
+                color: 'rgba(0, 255, 136, 0.5)',
+                animation: 'lockOnPulse 1.5s ease-in-out infinite',
+                letterSpacing: '0.4em',
+              }}
+            >
+              LOCK ON TARGET
             </div>
           )}
         </div>
       </div>
 
-      {/* Decorative corners */}
-      <div className="absolute" style={{ width: '280px', height: '280px' }}>
-        {/* Top-left corner */}
-        <div className="absolute top-0 left-0 w-6 h-6 border-t-2 border-l-2" style={{ borderColor: `${color}40` }} />
-        {/* Top-right corner */}
-        <div className="absolute top-0 right-0 w-6 h-6 border-t-2 border-r-2" style={{ borderColor: `${color}40` }} />
-        {/* Bottom-left corner */}
-        <div className="absolute bottom-0 left-0 w-6 h-6 border-b-2 border-l-2" style={{ borderColor: `${color}40` }} />
-        {/* Bottom-right corner */}
-        <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2" style={{ borderColor: `${color}40` }} />
+      {/* Corner brackets */}
+      <div className="absolute" style={{ width: '360px', height: '360px' }}>
+        <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2" style={{ borderColor: `${color}30` }} />
+        <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2" style={{ borderColor: `${color}30` }} />
+        <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2" style={{ borderColor: `${color}30` }} />
+        <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2" style={{ borderColor: `${color}30` }} />
       </div>
 
       {/* Scanline effect */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-[0.03]">
+      <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-[0.02]">
         <div style={{
           width: '100%',
           height: '200%',
