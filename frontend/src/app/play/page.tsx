@@ -402,14 +402,15 @@ export default function PlayPage() {
             <div className="text-xs font-heading uppercase tracking-[0.25em] text-[var(--color-text-muted)] mb-2">
               Share this code
             </div>
-            <div
-              className="font-mono font-bold text-4xl sm:text-5xl tracking-[0.3em] text-glow cursor-pointer transition-all hover:scale-[1.02]"
+            <button
+              className="w-full font-mono font-bold text-4xl sm:text-5xl tracking-[0.3em] text-glow cursor-pointer transition-all hover:scale-[1.02] focus-visible:ring-2 focus-visible:ring-[#00ff88] focus-visible:outline-none rounded-sm bg-transparent border-none p-0"
               style={{ color: '#00ff88' }}
               onClick={() => navigator.clipboard?.writeText(game.roomCode)}
-              title="Click to copy"
+              title="Click to copy room code"
+              aria-label={`Room code: ${game.roomCode}. Click to copy.`}
             >
               {game.roomCode}
-            </div>
+            </button>
             <div className="text-xs text-[var(--color-text-muted)] mt-2 opacity-60">Click to copy</div>
           </div>
 
