@@ -287,7 +287,7 @@ export default function GameCanvas({
       </div>
 
       {/* ── Question Area ─────────────────────────────── */}
-      <div className="absolute top-[7rem] sm:top-[8rem] left-1/2 -translate-x-1/2 z-20 text-center">
+      <div className="absolute top-[6.5rem] sm:top-[7.5rem] left-1/2 -translate-x-1/2 z-30 text-center max-w-[90vw]">
         <div className="text-xs sm:text-sm text-[var(--color-text-muted)] font-heading uppercase tracking-[0.2em] mb-2">
           {QUIZ_LABELS[quizType]}
         </div>
@@ -327,7 +327,7 @@ export default function GameCanvas({
       </div>
 
       {/* ── Targets ───────────────────────────────────── */}
-      <div className="absolute inset-0 pt-40 sm:pt-48 pb-6 z-10">
+      <div className="absolute top-[12rem] sm:top-[14rem] left-0 right-0 bottom-6 z-10">
         {targets.map(target => {
           const isHit = hitTargets.has(target.id);
           return (
