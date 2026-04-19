@@ -20,7 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <AuthProvider>
           <Header />
-          <main className="pt-16 min-h-screen">
+          <main className="pt-[4.5rem] min-h-screen">
             {children}
           </main>
         </AuthProvider>
