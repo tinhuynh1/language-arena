@@ -256,16 +256,30 @@ export default function PlayPage() {
   // Queuing / Creating Room
   if (game.state === 'queuing' || game.state === 'creating_room') {
     return (
-      <div className="min-h-screen flex items-center justify-center px-6">
+      <div className="min-h-screen flex items-center justify-center px-4">
         <div className="text-center">
-          <div className="w-16 h-16 border-2 border-[var(--color-accent-neon)] border-t-transparent rounded-full animate-spin mx-auto mb-6" />
-          <div className="font-heading font-bold text-2xl mb-2 uppercase">
-            {selectedMode === 'duel' ? 'Finding Opponent...' : selectedMode === 'battle' ? 'Creating Room...' : 'Preparing Arena...'}
-          </div>
-          <p className="text-sm text-[var(--color-text-muted)]">
-            {selectedLevel} • {selectedLang === 'en' ? 'English' : 'Chinese'}
-          </p>
-          <button onClick={handleLeave} className="btn-secondary mt-8">CANCEL</button>
+          {!game.connected ? (
+            <>
+              <div className="w-16 h-16 border-2 border-[var(--color-accent-orange)] border-t-transparent rounded-full animate-spin mx-auto mb-6" />
+              <div className="font-heading font-bold text-xl sm:text-2xl mb-2 uppercase" style={{ color: '#ff6b35' }}>
+                Connecting...
+              </div>
+              <p className="text-xs sm:text-sm text-[var(--color-text-muted)]">
+                Establishing secure connection
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="w-16 h-16 border-2 border-[var(--color-accent-neon)] border-t-transparent rounded-full animate-spin mx-auto mb-6" />
+              <div className="font-heading font-bold text-xl sm:text-2xl mb-2 uppercase">
+                {selectedMode === 'duel' ? 'Finding Opponent...' : selectedMode === 'battle' ? 'Creating Room...' : 'Preparing Arena...'}
+              </div>
+              <p className="text-xs sm:text-sm text-[var(--color-text-muted)]">
+                {selectedLevel} • {selectedLang === 'en' ? 'English' : 'Chinese'}
+              </p>
+            </>
+          )}
+          <button onClick={handleLeave} className="btn-secondary mt-6 sm:mt-8 text-sm">CANCEL</button>
         </div>
       </div>
     );
