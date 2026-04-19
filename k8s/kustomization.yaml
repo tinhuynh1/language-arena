@@ -3,7 +3,8 @@ kind: Kustomization
 
 resources:
   - namespace.yaml
-  - secrets.yaml
+  # secrets.yaml bị loại bỏ khỏi CI/CD vì chứa placeholder CHANGE_ME
+  # Secret thật đã được tạo thủ công bằng: kubectl create secret generic lingo-secrets ...
   - backend/deployment.yaml
   - backend/service.yaml
   - frontend/deployment.yaml
