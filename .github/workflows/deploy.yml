@@ -8,7 +8,7 @@ on:
 env:
   PROJECT_ID: lingo-sniper-prod
   GAR_LOCATION: asia-southeast1
-  REGION: asia-southeast1
+  REGION: asia-southeast1-a
   REPOSITORY: lingo-sniper
   CLUSTER_NAME: lingo-sniper-cluster
   # Tên Github Repo của bạn (Ví dụ: user/repo)
