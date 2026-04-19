@@ -14,6 +14,7 @@ import {
   type PlayerJoinedData,
   type LeaderboardPlayer,
   type LiveLeaderboardData,
+  type HostChangedData,
 } from './useWebSocket';
 
 export type GameState = 'idle' | 'queuing' | 'creating_room' | 'in_lobby' | 'matched' | 'countdown' | 'playing' | 'round_end' | 'game_over';
@@ -41,6 +42,8 @@ interface GameStore {
   gameOverData: GameOverData | null;
   liveLeaderboard: LeaderboardPlayer[];
   errorMessage: string;
+  isHost: boolean;
+  hostUsername: string;
 }
 
 const initialStore: GameStore = {
@@ -66,6 +69,8 @@ const initialStore: GameStore = {
   gameOverData: null,
   liveLeaderboard: [],
   errorMessage: '',
+  isHost: false,
+  hostUsername: '',
 };
 
 export function useGame() {
@@ -91,6 +96,7 @@ export function useGame() {
             roomCode: data.room_code,
             roomId: data.room_id,
             playerCount: 1,
+            isHost: true,
           });
           break;
         }
@@ -100,6 +106,7 @@ export function useGame() {
           updateStore({
             playerCount: data.player_count,
             players: data.players,
+            hostUsername: data.host || '',
           });
           break;
         }
@@ -109,6 +116,7 @@ export function useGame() {
           updateStore({
             playerCount: data.player_count,
             players: data.players,
+            hostUsername: data.host || '',
           });
           break;
         }
@@ -116,10 +124,12 @@ export function useGame() {
         case 'match_found': {
           const data = msg.data as MatchFoundData;
           updateStore({
-            state: 'matched',
+            state: data.mode === 'battle' ? 'in_lobby' : 'matched',
             roomId: data.room_id,
             opponent: data.opponent || '',
             playerCount: data.player_count || 2,
+            isHost: data.is_host || false,
+            hostUsername: data.host || '',
           });
           break;
         }
@@ -173,6 +183,15 @@ export function useGame() {
         case 'opponent_left':
           updateStore({ state: 'game_over', gameOverData: null });
           break;
+
+        case 'host_changed': {
+          const data = msg.data as HostChangedData;
+          updateStore({
+            hostUsername: data.new_host,
+            // isHost will be evaluated in the component via hostUsername === username
+          });
+          break;
+        }
 
         case 'error': {
           const errorStr = typeof msg.data === 'string' ? msg.data : 'Unknown error';

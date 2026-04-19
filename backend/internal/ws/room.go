@@ -121,6 +121,24 @@ func (r *Room) AddPlayer(client *Client) bool {
 	return true
 }
 
+func (r *Room) GetHostUsername() string {
+	for c := range r.Players {
+		if c.ID == r.HostID {
+			return c.Username
+		}
+	}
+	return ""
+}
+
+func (r *Room) getHostUsernameUnlocked() string {
+	for c := range r.Players {
+		if c.ID == r.HostID {
+			return c.Username
+		}
+	}
+	return ""
+}
+
 func (r *Room) SetReady(client *Client) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -562,6 +580,19 @@ func (r *Room) RemovePlayer(client *Client) {
 		}
 		r.State = StateFinished
 	} else if r.Mode == model.ModeBattle {
+		// Transfer host if the leaving player was the host
+		if client.ID == r.HostID && len(r.Players) > 0 {
+			for c := range r.Players {
+				r.HostID = c.ID
+				r.log.Info("host transferred", "new_host", c.Username)
+				r.broadcastUnlocked(WSMessage{
+					Type: MsgHostChanged,
+					Data: HostChangedData{NewHost: c.Username},
+				})
+				break
+			}
+		}
+
 		// Notify remaining players
 		names := r.getPlayerNames()
 		r.broadcastUnlocked(WSMessage{
@@ -570,8 +601,14 @@ func (r *Room) RemovePlayer(client *Client) {
 				Username:    client.Username,
 				PlayerCount: len(r.Players),
 				Players:     names,
+				Host:        r.getHostUsernameUnlocked(),
 			},
 		})
+
+		// Clean up empty rooms
+		if len(r.Players) == 0 && r.Hub != nil {
+			go r.Hub.RemoveRoom(r)
+		}
 	}
 }
 

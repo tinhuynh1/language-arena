@@ -368,59 +368,134 @@ export default function PlayPage() {
 
   // Battle Lobby - Waiting for players
   if (game.state === 'in_lobby') {
+    const amIHost = game.isHost || game.hostUsername === user.username;
     return (
-      <div className="min-h-screen flex items-center justify-center px-6">
-        <div className="w-full max-w-md text-center">
-          <div className="font-heading font-bold text-3xl sm:text-4xl mb-2 uppercase text-glow-cyan" style={{ color: '#00d4ff' }}>
-            BATTLE ROOM
+      <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 relative overflow-hidden">
+        {/* Background grid */}
+        <div className="absolute inset-0 opacity-[0.02]" aria-hidden="true" style={{
+          backgroundImage: `linear-gradient(rgba(0,212,255,0.4) 1px, transparent 1px),
+                            linear-gradient(90deg, rgba(0,212,255,0.4) 1px, transparent 1px)`,
+          backgroundSize: '60px 60px',
+        }} />
+
+        {/* Ambient orbs */}
+        <div className="orb w-[400px] h-[400px] opacity-[0.06]"
+             style={{ background: '#00d4ff', top: '-10%', right: '-10%' }} />
+        <div className="orb w-[300px] h-[300px] opacity-[0.04]"
+             style={{ background: '#00ff88', bottom: '-5%', left: '-10%', animationDelay: '-6s' }} />
+
+        <div className="w-full max-w-lg text-center relative z-10">
+          {/* Title */}
+          <div className="animate-fade-in-up mb-6">
+            <h1 className="font-heading font-bold text-3xl sm:text-4xl mb-1 uppercase tracking-wider">
+              Battle <span className="text-glow-cyan" style={{ color: '#00d4ff' }}>Room</span>
+            </h1>
+            <p className="text-sm text-[var(--color-text-muted)]">Waiting for players to join</p>
           </div>
 
-          {/* Room Code */}
-          <div className="card mb-6 py-6">
-            <div className="text-xs sm:text-sm font-heading uppercase tracking-widest text-[var(--color-text-muted)] mb-2">
-              Share this code with friends
+          {/* Room Code Card */}
+          <div className="mb-6 px-6 py-5 rounded-sm animate-fade-in-up delay-100" style={{
+            background: 'rgba(0, 212, 255, 0.04)',
+            border: '1px solid rgba(0, 212, 255, 0.15)',
+            backdropFilter: 'blur(8px)',
+          }}>
+            <div className="text-xs font-heading uppercase tracking-[0.25em] text-[var(--color-text-muted)] mb-2">
+              Share this code
             </div>
             <div
-              className="font-mono font-bold text-4xl sm:text-5xl tracking-[0.2em] sm:tracking-[0.3em] text-glow cursor-pointer"
+              className="font-mono font-bold text-4xl sm:text-5xl tracking-[0.3em] text-glow cursor-pointer transition-all hover:scale-[1.02]"
               style={{ color: '#00ff88' }}
               onClick={() => navigator.clipboard?.writeText(game.roomCode)}
               title="Click to copy"
             >
               {game.roomCode}
             </div>
-            <div className="text-xs text-[var(--color-text-muted)] mt-2">Click to copy</div>
+            <div className="text-xs text-[var(--color-text-muted)] mt-2 opacity-60">Click to copy</div>
           </div>
 
-          {/* Player Count */}
-          <div className="card mb-6">
+          {/* Player List */}
+          <div className="mb-6 px-5 py-4 rounded-sm animate-fade-in-up delay-200" style={{
+            background: 'rgba(255,255,255,0.02)',
+            border: '1px solid rgba(255,255,255,0.06)',
+          }}>
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-heading uppercase tracking-wider text-[var(--color-text-muted)]">Players</span>
-              <span className="font-mono font-bold text-xl" style={{ color: '#00ff88' }}>
-                {game.playerCount}/100
+              <span className="text-xs font-heading uppercase tracking-wider text-[var(--color-text-muted)]">
+                Players
+              </span>
+              <span className="font-mono font-bold text-sm" style={{ color: '#00ff88' }}>
+                {game.playerCount}
               </span>
             </div>
-            {game.players.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {game.players.map(name => (
-                  <span key={name} className="px-2 py-1 text-xs font-heading bg-[var(--color-bg-primary)] border border-[var(--color-border-default)]"
-                    style={{ borderRadius: '2px' }}>
-                    {name}
-                  </span>
-                ))}
-              </div>
-            )}
+            <div className="space-y-2">
+              {game.players.map(name => {
+                const isPlayerHost = name === game.hostUsername;
+                return (
+                  <div key={name} className="flex items-center gap-3 px-3 py-2.5 rounded-sm transition-all" style={{
+                    background: isPlayerHost ? 'rgba(0, 212, 255, 0.06)' : 'rgba(255,255,255,0.02)',
+                    border: `1px solid ${isPlayerHost ? 'rgba(0, 212, 255, 0.2)' : 'rgba(255,255,255,0.05)'}`,
+                  }}>
+                    {/* Avatar circle */}
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold font-heading shrink-0" style={{
+                      background: isPlayerHost ? 'rgba(0, 212, 255, 0.15)' : 'rgba(0, 255, 136, 0.1)',
+                      color: isPlayerHost ? '#00d4ff' : '#00ff88',
+                      border: `1px solid ${isPlayerHost ? 'rgba(0,212,255,0.3)' : 'rgba(0,255,136,0.2)'}`,
+                    }}>
+                      {name[0]?.toUpperCase()}
+                    </div>
+                    <span className="font-heading text-sm font-bold flex-1 text-left" style={{
+                      color: isPlayerHost ? '#00d4ff' : 'var(--color-text-primary)',
+                    }}>
+                      {name}
+                    </span>
+                    {/* Host badge */}
+                    {isPlayerHost && (
+                      <span className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-heading uppercase tracking-wider rounded-sm" style={{
+                        background: 'rgba(0, 212, 255, 0.1)',
+                        color: '#00d4ff',
+                        border: '1px solid rgba(0, 212, 255, 0.2)',
+                      }}>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="#00d4ff" stroke="none">
+                          <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
+                        </svg>
+                        HOST
+                      </span>
+                    )}
+                    {name === user.username && !isPlayerHost && (
+                      <span className="text-[10px] font-heading uppercase tracking-wider text-[var(--color-text-muted)] opacity-50">
+                        YOU
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
-          {/* Start Button (Host only) */}
-          <div className="flex gap-3 justify-center">
-            <button
-              onClick={() => game.startGame()}
-              className="btn-primary text-lg px-10 py-4"
-              disabled={game.playerCount < 1}
-            >
-              START GAME ({game.playerCount} players)
-            </button>
-            <button onClick={handleLeave} className="btn-secondary py-4 px-6">
+          {/* Actions */}
+          <div className="flex gap-3 justify-center animate-fade-in-up delay-300">
+            {amIHost ? (
+              <button
+                onClick={() => game.startGame()}
+                className="btn-primary text-base px-10 py-3.5 cursor-pointer"
+                disabled={game.playerCount < 2}
+              >
+                {game.playerCount < 2 ? 'WAITING FOR PLAYERS...' : `START GAME (${game.playerCount} players)`}
+              </button>
+            ) : (
+              <button
+                disabled
+                className="text-base px-10 py-3.5 font-heading font-bold uppercase tracking-wider border-2 cursor-not-allowed opacity-60"
+                style={{
+                  borderColor: 'rgba(0,212,255,0.2)',
+                  color: '#00d4ff',
+                  background: 'rgba(0,212,255,0.05)',
+                  borderRadius: '3px',
+                }}
+              >
+                WAITING FOR HOST TO START...
+              </button>
+            )}
+            <button onClick={handleLeave} className="btn-secondary py-3.5 px-6 cursor-pointer">
               LEAVE
             </button>
           </div>
