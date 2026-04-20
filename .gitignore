@@ -34,8 +34,7 @@ redisdata/
 # Agent config (AI workspace rules - không cần trên remote)
 .agent/
 
-# Docs (tài liệu cá nhân, không public)
-docs/
+
 
 # Scale config (local testing only)
 docker-compose.scale.yml
