@@ -3,29 +3,47 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"log/slog"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/michael/language-arena/backend/internal/model"
 )
 
+const slowQueryThreshold = 100 * time.Millisecond
+
 type UserRepository struct {
-	db *sql.DB
+	db  *sql.DB
+	log *slog.Logger
 }
 
 func NewUserRepository(db *sql.DB) *UserRepository {
-	return &UserRepository{db: db}
+	return &UserRepository{
+		db:  db,
+		log: slog.Default().With("component", "REPO.User"),
+	}
 }
 
 func (r *UserRepository) Create(ctx context.Context, user *model.User) error {
+	start := time.Now()
 	query := `INSERT INTO users (id, username, email, password_hash) 
 	          VALUES ($1, $2, $3, $4) RETURNING created_at`
 	user.ID = uuid.New()
-	return r.db.QueryRowContext(ctx, query,
+	err := r.db.QueryRowContext(ctx, query,
 		user.ID, user.Username, user.Email, user.PasswordHash,
 	).Scan(&user.CreatedAt)
+
+	duration := time.Since(start)
+	if err != nil {
+		r.log.Error("create user failed", "op", "Create", "email", user.Email, "err", err, "duration_ms", duration.Milliseconds(), r.reqIDAttr(ctx))
+		return err
+	}
+	r.warnSlow("Create", duration, ctx)
+	return nil
 }
 
 func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*model.User, error) {
+	start := time.Now()
 	user := &model.User{}
 	query := `SELECT id, username, email, password_hash, total_score, games_played, best_reaction_ms, created_at 
 	          FROM users WHERE email = $1`
@@ -33,13 +51,20 @@ func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*model.
 		&user.ID, &user.Username, &user.Email, &user.PasswordHash,
 		&user.TotalScore, &user.GamesPlayed, &user.BestReactionMs, &user.CreatedAt,
 	)
+
+	duration := time.Since(start)
 	if err != nil {
+		if err != sql.ErrNoRows {
+			r.log.Error("find user by email failed", "op", "FindByEmail", "email", email, "err", err, "duration_ms", duration.Milliseconds(), r.reqIDAttr(ctx))
+		}
 		return nil, err
 	}
+	r.warnSlow("FindByEmail", duration, ctx)
 	return user, nil
 }
 
 func (r *UserRepository) FindByID(ctx context.Context, id uuid.UUID) (*model.User, error) {
+	start := time.Now()
 	user := &model.User{}
 	query := `SELECT id, username, email, password_hash, total_score, games_played, best_reaction_ms, created_at 
 	          FROM users WHERE id = $1`
@@ -47,13 +72,20 @@ func (r *UserRepository) FindByID(ctx context.Context, id uuid.UUID) (*model.Use
 		&user.ID, &user.Username, &user.Email, &user.PasswordHash,
 		&user.TotalScore, &user.GamesPlayed, &user.BestReactionMs, &user.CreatedAt,
 	)
+
+	duration := time.Since(start)
 	if err != nil {
+		if err != sql.ErrNoRows {
+			r.log.Error("find user by id failed", "op", "FindByID", "user_id", id, "err", err, "duration_ms", duration.Milliseconds(), r.reqIDAttr(ctx))
+		}
 		return nil, err
 	}
+	r.warnSlow("FindByID", duration, ctx)
 	return user, nil
 }
 
 func (r *UserRepository) UpdateStats(ctx context.Context, userID uuid.UUID, scoreAdd int64, reactionMs int) error {
+	start := time.Now()
 	query := `UPDATE users SET 
 	          total_score = total_score + $2, 
 	          games_played = games_played + 1,
@@ -63,14 +95,24 @@ func (r *UserRepository) UpdateStats(ctx context.Context, userID uuid.UUID, scor
 	          END
 	          WHERE id = $1`
 	_, err := r.db.ExecContext(ctx, query, userID, scoreAdd, reactionMs)
-	return err
+
+	duration := time.Since(start)
+	if err != nil {
+		r.log.Error("update user stats failed", "op", "UpdateStats", "user_id", userID, "score_add", scoreAdd, "err", err, "duration_ms", duration.Milliseconds(), r.reqIDAttr(ctx))
+		return err
+	}
+	r.warnSlow("UpdateStats", duration, ctx)
+	return nil
 }
 
 func (r *UserRepository) GetLeaderboard(ctx context.Context, limit int) ([]model.LeaderboardEntry, error) {
+	start := time.Now()
 	query := `SELECT id, username, total_score, games_played, best_reaction_ms 
 	          FROM users ORDER BY total_score DESC LIMIT $1`
 	rows, err := r.db.QueryContext(ctx, query, limit)
 	if err != nil {
+		duration := time.Since(start)
+		r.log.Error("get leaderboard failed", "op", "GetLeaderboard", "limit", limit, "err", err, "duration_ms", duration.Milliseconds(), r.reqIDAttr(ctx))
 		return nil, err
 	}
 	defer rows.Close()
@@ -80,11 +122,35 @@ func (r *UserRepository) GetLeaderboard(ctx context.Context, limit int) ([]model
 	for rows.Next() {
 		var e model.LeaderboardEntry
 		if err := rows.Scan(&e.UserID, &e.Username, &e.TotalScore, &e.GamesPlayed, &e.BestReactionMs); err != nil {
+			r.log.Error("scan leaderboard row failed", "op", "GetLeaderboard", "rank", rank, "err", err, r.reqIDAttr(ctx))
 			return nil, err
 		}
 		e.Rank = rank
 		rank++
 		entries = append(entries, e)
 	}
+
+	duration := time.Since(start)
+	r.warnSlow("GetLeaderboard", duration, ctx)
 	return entries, rows.Err()
 }
+
+// warnSlow logs a warning if the query took longer than the threshold.
+func (r *UserRepository) warnSlow(op string, duration time.Duration, ctx context.Context) {
+	if duration > slowQueryThreshold {
+		r.log.Warn("slow query", "op", op, "duration_ms", duration.Milliseconds(), r.reqIDAttr(ctx))
+	}
+}
+
+// reqIDAttr extracts request_id from context for log correlation.
+func (r *UserRepository) reqIDAttr(ctx context.Context) slog.Attr {
+	if id, ok := ctx.Value(requestIDCtxKey).(string); ok {
+		return slog.String("request_id", id)
+	}
+	return slog.String("request_id", "")
+}
+
+// contextKey mirrors the key used in middleware for request_id propagation.
+type contextKey string
+
+const requestIDCtxKey contextKey = "request_id"

@@ -1,20 +1,26 @@
 package handler
 
 import (
+	"log/slog"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/michael/language-arena/backend/internal/middleware"
 	"github.com/michael/language-arena/backend/internal/service"
 	"github.com/michael/language-arena/backend/pkg/response"
 )
 
 type LeaderboardHandler struct {
 	leaderboardService *service.LeaderboardService
+	log                *slog.Logger
 }
 
 func NewLeaderboardHandler(leaderboardService *service.LeaderboardService) *LeaderboardHandler {
-	return &LeaderboardHandler{leaderboardService: leaderboardService}
+	return &LeaderboardHandler{
+		leaderboardService: leaderboardService,
+		log:                slog.Default().With("component", "HANDLER.Leaderboard"),
+	}
 }
 
 func (h *LeaderboardHandler) GetLeaderboard(c *gin.Context) {
@@ -26,6 +32,7 @@ func (h *LeaderboardHandler) GetLeaderboard(c *gin.Context) {
 
 	entries, err := h.leaderboardService.GetTopPlayers(c.Request.Context(), limit)
 	if err != nil {
+		h.log.Error("get leaderboard failed", "limit", limit, "err", err, "request_id", middleware.RequestIDFromContext(c.Request.Context()))
 		response.InternalError(c, "failed to fetch leaderboard")
 		return
 	}
@@ -40,8 +47,10 @@ func (h *LeaderboardHandler) GetMyStats(c *gin.Context) {
 		return
 	}
 
-	user, games, err := h.leaderboardService.GetPlayerStats(c.Request.Context(), userID.(uuid.UUID))
+	uid := userID.(uuid.UUID)
+	user, games, err := h.leaderboardService.GetPlayerStats(c.Request.Context(), uid)
 	if err != nil {
+		h.log.Error("get player stats failed", "user_id", uid, "err", err, "request_id", middleware.RequestIDFromContext(c.Request.Context()))
 		response.InternalError(c, "failed to fetch stats")
 		return
 	}

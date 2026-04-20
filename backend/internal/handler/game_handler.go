@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"github.com/michael/language-arena/backend/internal/middleware"
 	"github.com/michael/language-arena/backend/internal/repository"
 	"github.com/michael/language-arena/backend/internal/service"
 	"github.com/michael/language-arena/backend/internal/ws"
@@ -19,6 +20,7 @@ type GameHandler struct {
 	gameRepo *repository.GameRepository
 	authSvc  *service.AuthService
 	upgrader websocket.Upgrader
+	log      *slog.Logger
 }
 
 func NewGameHandler(hub *ws.Hub, userRepo *repository.UserRepository, gameRepo *repository.GameRepository, authSvc *service.AuthService, allowedWSOrigins []string) *GameHandler {
@@ -32,13 +34,14 @@ func NewGameHandler(hub *ws.Hub, userRepo *repository.UserRepository, gameRepo *
 		userRepo: userRepo,
 		gameRepo: gameRepo,
 		authSvc:  authSvc,
+		log:      slog.Default().With("component", "HANDLER.Game"),
 		upgrader: websocket.Upgrader{
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
 			CheckOrigin: func(r *http.Request) bool {
 				origin := r.Header.Get("Origin")
 				if origin == "" {
-					return true // Allow non-browser clients (curl, Postman)
+					return true
 				}
 				_, ok := originSet[origin]
 				return ok
@@ -58,21 +61,25 @@ func (h *GameHandler) HandleWebSocket(c *gin.Context) {
 
 	userID, err := h.authSvc.ValidateToken(token)
 	if err != nil {
+		h.log.Warn("ws: invalid token", "err", err, "ip", c.ClientIP(), "request_id", middleware.RequestIDFromContext(c.Request.Context()))
 		response.Unauthorized(c, "invalid token")
 		return
 	}
 
 	user, err := h.userRepo.FindByID(c.Request.Context(), userID)
 	if err != nil {
+		h.log.Error("ws: user not found", "user_id", userID, "err", err, "request_id", middleware.RequestIDFromContext(c.Request.Context()))
 		response.NotFound(c, "user not found")
 		return
 	}
 
 	conn, err := h.upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		slog.Error("ws upgrade error", "component", "WS", "err", err, "user_id", userID)
+		h.log.Error("ws: upgrade failed", "user_id", userID, "err", err, "origin", c.Request.Header.Get("Origin"))
 		return
 	}
+
+	h.log.Info("ws: client connected", "user_id", userID, "username", user.Username, "ip", c.ClientIP())
 
 	client := ws.NewClient(h.hub, conn, user.ID, user.Username)
 	h.hub.Register <- client
@@ -92,8 +99,10 @@ func (h *GameHandler) GetGameHistory(c *gin.Context) {
 		return
 	}
 
-	games, err := h.gameRepo.FindByUserID(c.Request.Context(), userID.(uuid.UUID), 20)
+	uid := userID.(uuid.UUID)
+	games, err := h.gameRepo.FindByUserID(c.Request.Context(), uid, 20)
 	if err != nil {
+		h.log.Error("get game history failed", "user_id", uid, "err", err, "request_id", middleware.RequestIDFromContext(c.Request.Context()))
 		response.InternalError(c, "failed to fetch game history")
 		return
 	}

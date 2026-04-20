@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -33,20 +34,30 @@ type AuthService struct {
 	userReader UserReader
 	userWriter UserWriter
 	cfg        *config.JWTConfig
+	log        *slog.Logger
 }
 
 func NewAuthService(reader UserReader, writer UserWriter, cfg *config.JWTConfig) *AuthService {
-	return &AuthService{userReader: reader, userWriter: writer, cfg: cfg}
+	return &AuthService{
+		userReader: reader,
+		userWriter: writer,
+		cfg:        cfg,
+		log:        slog.Default().With("component", "SVC.Auth"),
+	}
 }
 
 func (s *AuthService) Register(ctx context.Context, req model.RegisterRequest) (*model.AuthResponse, error) {
+	start := time.Now()
+
 	existing, _ := s.userReader.FindByEmail(ctx, req.Email)
 	if existing != nil {
+		s.log.Info("register rejected: email exists", "op", "Register", "email", req.Email)
 		return nil, ErrUserExists
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
+		s.log.Error("bcrypt hash failed", "op", "Register", "err", err)
 		return nil, err
 	}
 
@@ -57,32 +68,41 @@ func (s *AuthService) Register(ctx context.Context, req model.RegisterRequest) (
 	}
 
 	if err := s.userWriter.Create(ctx, user); err != nil {
+		s.log.Error("user creation failed", "op", "Register", "email", req.Email, "username", req.Username, "err", err)
 		return nil, err
 	}
 
 	token, err := s.generateToken(user.ID)
 	if err != nil {
+		s.log.Error("token generation failed", "op", "Register", "user_id", user.ID, "err", err)
 		return nil, err
 	}
 
+	s.log.Info("user registered", "op", "Register", "user_id", user.ID, "email", req.Email, "duration_ms", time.Since(start).Milliseconds())
 	return &model.AuthResponse{Token: token, User: *user}, nil
 }
 
 func (s *AuthService) Login(ctx context.Context, req model.LoginRequest) (*model.AuthResponse, error) {
+	start := time.Now()
+
 	user, err := s.userReader.FindByEmail(ctx, req.Email)
 	if err != nil {
+		s.log.Debug("login failed: user not found", "op", "Login", "email", req.Email)
 		return nil, ErrInvalidCredentials
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
+		s.log.Info("login failed: wrong password", "op", "Login", "email", req.Email, "user_id", user.ID)
 		return nil, ErrInvalidCredentials
 	}
 
 	token, err := s.generateToken(user.ID)
 	if err != nil {
+		s.log.Error("token generation failed", "op", "Login", "user_id", user.ID, "err", err)
 		return nil, err
 	}
 
+	s.log.Info("user logged in", "op", "Login", "user_id", user.ID, "duration_ms", time.Since(start).Milliseconds())
 	return &model.AuthResponse{Token: token, User: *user}, nil
 }
 
@@ -104,6 +124,7 @@ func (s *AuthService) ValidateToken(tokenString string) (uuid.UUID, error) {
 		return []byte(s.cfg.Secret), nil
 	})
 	if err != nil {
+		s.log.Debug("token validation failed", "op", "ValidateToken", "err", err)
 		return uuid.Nil, err
 	}
 
