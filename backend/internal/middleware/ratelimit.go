@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 
@@ -52,6 +53,7 @@ func (rl *RateLimiter) Middleware() gin.HandlerFunc {
 		if !exists || time.Since(v.lastSeen) > rl.window {
 			rl.visitors[ip] = &visitor{count: 1, lastSeen: time.Now()}
 			rl.mu.Unlock()
+			rl.setHeaders(c, 1)
 			c.Next()
 			return
 		}
@@ -61,6 +63,8 @@ func (rl *RateLimiter) Middleware() gin.HandlerFunc {
 		count := v.count
 		rl.mu.Unlock()
 
+		rl.setHeaders(c, count)
+
 		if count > rl.limit {
 			c.JSON(http.StatusTooManyRequests, gin.H{"success": false, "error": "rate limit exceeded"})
 			c.Abort()
@@ -69,4 +73,15 @@ func (rl *RateLimiter) Middleware() gin.HandlerFunc {
 
 		c.Next()
 	}
+}
+
+// setHeaders adds RFC 6585 rate limit headers to every response.
+func (rl *RateLimiter) setHeaders(c *gin.Context, currentCount int) {
+	remaining := rl.limit - currentCount
+	if remaining < 0 {
+		remaining = 0
+	}
+	c.Header("X-RateLimit-Limit", strconv.Itoa(rl.limit))
+	c.Header("X-RateLimit-Remaining", strconv.Itoa(remaining))
+	c.Header("X-RateLimit-Reset", strconv.FormatInt(time.Now().Add(rl.window).Unix(), 10))
 }

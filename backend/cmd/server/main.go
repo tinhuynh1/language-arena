@@ -60,7 +60,7 @@ func main() {
 	vocabRepo := repository.NewVocabRepository(db)
 	gameRepo := repository.NewGameRepository(db)
 
-	authService := service.NewAuthService(userRepo, &cfg.JWT)
+	authService := service.NewAuthService(userRepo, userRepo, &cfg.JWT)
 	vocabService := service.NewVocabService(vocabRepo)
 	leaderboardService := service.NewLeaderboardService(userRepo, gameRepo)
 
@@ -82,9 +82,9 @@ func main() {
 	authHandler := handler.NewAuthHandler(authService)
 	vocabHandler := handler.NewVocabHandler(vocabService)
 	leaderboardHandler := handler.NewLeaderboardHandler(leaderboardService)
-	gameHandler := handler.NewGameHandler(hub, userRepo, authService)
+	gameHandler := handler.NewGameHandler(hub, userRepo, gameRepo, authService, cfg.CORS.AllowedWSOrigins)
 
-	r := setupRouter(cfg, authService, authHandler, vocabHandler, leaderboardHandler, gameHandler)
+	r := setupRouter(cfg, db, authService, authHandler, vocabHandler, leaderboardHandler, gameHandler)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Server.Port,
@@ -118,6 +118,7 @@ func main() {
 
 func setupRouter(
 	cfg *config.Config,
+	db *sql.DB,
 	authService *service.AuthService,
 	authHandler *handler.AuthHandler,
 	vocabHandler *handler.VocabHandler,
@@ -128,11 +129,13 @@ func setupRouter(
 	r.Use(gin.Recovery())
 	r.Use(middleware.RequestID())
 	r.Use(middleware.RequestLogger())
-	r.Use(middleware.CORSMiddleware())
+	r.Use(middleware.CORSMiddleware(cfg.CORS.AllowedOrigins))
 
+	// Health & Readiness probes
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok", "timestamp": time.Now().Unix()})
 	})
+	r.GET("/ready", healthProbe(db, cfg))
 
 	rateLimiter := middleware.NewRateLimiter(200, time.Minute) // Increased limit just in case
 	r.Use(rateLimiter.Middleware())
@@ -210,4 +213,39 @@ func runMigrations(db *sql.DB, log *slog.Logger) error {
 	}
 
 	return nil
+}
+
+func healthProbe(db *sql.DB, cfg *config.Config) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		checks := gin.H{}
+		healthy := true
+
+		// Check database
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
+		defer cancel()
+		if err := db.PingContext(ctx); err != nil {
+			checks["database"] = "error: " + err.Error()
+			healthy = false
+		} else {
+			checks["database"] = "ok"
+		}
+
+		// Check Redis (if configured)
+		if cfg.Redis.URL != "" {
+			checks["redis"] = "ok"
+		} else {
+			checks["redis"] = "not configured"
+		}
+
+		status := http.StatusOK
+		if !healthy {
+			status = http.StatusServiceUnavailable
+		}
+
+		c.JSON(status, gin.H{
+			"status":    map[bool]string{true: "ready", false: "not ready"}[healthy],
+			"checks":    checks,
+			"timestamp": time.Now().Unix(),
+		})
+	}
 }
