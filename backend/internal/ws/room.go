@@ -400,13 +400,18 @@ func (r *Room) HandleHit(client *Client, data TargetHitData) {
 					break
 				}
 			}
+			// Only show reaction time to the player who hit
+			var reactionMs int
+			if otherClient == client {
+				reactionMs = data.ReactionMs
+			}
 			otherClient.SendMessage(WSMessage{
 				Type: MsgScoreUpdate,
 				Data: ScoreUpdateData{
 					You:        otherPS.Score,
 					Opponent:   opponentScore,
 					LastHitBy:  client.Username,
-					ReactionMs: data.ReactionMs,
+					ReactionMs: reactionMs,
 				},
 			})
 		}
