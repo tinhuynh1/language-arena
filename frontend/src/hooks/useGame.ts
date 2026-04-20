@@ -15,6 +15,7 @@ import {
   type LeaderboardPlayer,
   type LiveLeaderboardData,
   type HostChangedData,
+  type GameStateSyncData,
 } from './useWebSocket';
 
 export type GameState = 'idle' | 'queuing' | 'creating_room' | 'in_lobby' | 'matched' | 'countdown' | 'playing' | 'round_end' | 'game_over';
@@ -190,8 +191,35 @@ export function useGame() {
           const data = msg.data as HostChangedData;
           updateStore({
             hostUsername: data.new_host,
-            // isHost will be evaluated in the component via hostUsername === username
           });
+          break;
+        }
+
+        case 'game_state_sync': {
+          const data = msg.data as GameStateSyncData;
+          const stateMap: Record<string, GameState> = {
+            waiting: 'in_lobby',
+            countdown: 'countdown',
+            playing: 'playing',
+            round_end: 'round_end',
+            finished: 'game_over',
+          };
+          roundStartTimeRef.current = Date.now() - (data.elapsed_ms || 0);
+          updateStore({
+            state: stateMap[data.state] || 'playing',
+            mode: (data.mode as 'solo' | 'duel' | 'battle') || 'solo',
+            roomCode: data.room_code,
+            round: data.round,
+            totalRounds: data.total_rounds,
+            question: data.question,
+            targets: data.targets,
+            timeMs: data.time_ms,
+            myScore: data.your_score,
+            opponentScore: data.opponent_score,
+            players: data.players,
+            playerCount: data.players?.length || 0,
+          });
+          console.log('[Game] Reconnected! Restored state:', data.state, 'round:', data.round);
           break;
         }
 

@@ -7,7 +7,7 @@ export type WSMessageType =
   | 'join_queue' | 'create_room' | 'join_room' | 'start_game' | 'ready' | 'target_hit' | 'leave_room'
   | 'queue_joined' | 'match_found' | 'room_created' | 'player_joined' | 'player_left'
   | 'countdown' | 'round_start' | 'score_update' | 'live_leaderboard'
-  | 'round_end' | 'game_over' | 'opponent_left' | 'host_changed' | 'error';
+  | 'round_end' | 'game_over' | 'opponent_left' | 'host_changed' | 'game_state_sync' | 'error';
 
 export interface WSMessage {
   type: WSMessageType;
@@ -95,10 +95,25 @@ export interface HostChangedData {
   new_host: string;
 }
 
+export interface GameStateSyncData {
+  room_code: string;
+  mode: string;
+  state: string;
+  round: number;
+  total_rounds: number;
+  question: string;
+  targets: Target[];
+  time_ms: number;
+  elapsed_ms: number;
+  your_score: number;
+  opponent_score: number;
+  players: string[];
+}
+
 type MessageHandler = (msg: WSMessage) => void;
 
-const MAX_RECONNECT_ATTEMPTS = 3;
-const RECONNECT_DELAY_MS = 2000;
+const MAX_RECONNECT_ATTEMPTS = 5;
+const RECONNECT_BASE_DELAY_MS = 1000;
 
 export function useWebSocket() {
   const wsRef = useRef<WebSocket | null>(null);
@@ -158,13 +173,14 @@ export function useWebSocket() {
       setConnected(false);
       console.log('[WS] Disconnected, code:', event.code, 'reason:', event.reason);
 
-      // Auto-reconnect if not intentionally closed and has queued messages
-      if (!intentionalClose.current && msgQueue.current.length > 0 && reconnectAttempts.current < MAX_RECONNECT_ATTEMPTS) {
+      // Auto-reconnect on unexpected disconnect (covers F5, network drop, etc.)
+      if (!intentionalClose.current && reconnectAttempts.current < MAX_RECONNECT_ATTEMPTS) {
         reconnectAttempts.current++;
-        console.log(`[WS] Reconnecting (attempt ${reconnectAttempts.current}/${MAX_RECONNECT_ATTEMPTS})...`);
+        const delay = RECONNECT_BASE_DELAY_MS * Math.pow(1.5, reconnectAttempts.current - 1);
+        console.log(`[WS] Reconnecting in ${Math.round(delay)}ms (attempt ${reconnectAttempts.current}/${MAX_RECONNECT_ATTEMPTS})...`);
         reconnectTimer.current = setTimeout(() => {
           connect();
-        }, RECONNECT_DELAY_MS);
+        }, delay);
       }
     };
 

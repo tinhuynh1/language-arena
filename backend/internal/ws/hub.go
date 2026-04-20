@@ -5,12 +5,23 @@ import (
 	"encoding/json"
 	"log/slog"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/michael/language-arena/backend/internal/model"
 	"github.com/michael/language-arena/backend/internal/repository"
 	"github.com/michael/language-arena/backend/internal/service"
 )
+
+const maxDisconnectedPlayers = 500
+
+type DisconnectedPlayer struct {
+	Client    *Client
+	Room      *Room
+	Timer     *time.Timer
+	UserID    uuid.UUID
+	RoomCode  string
+}
 
 type Hub struct {
 	log        *slog.Logger
@@ -28,22 +39,25 @@ type Hub struct {
 	Redis        *RedisAdapter
 	proxyClients map[string]*Client // userID → proxy client on this node
 
+	disconnectedPlayers map[uuid.UUID]*DisconnectedPlayer
+
 	mu sync.RWMutex
 }
 
 func NewHub(vocabService *service.VocabService, gameRepo *repository.GameRepository, userRepo *repository.UserRepository, redisAdapter *RedisAdapter) *Hub {
 	h := &Hub{
-		log:          slog.Default().With("component", "WS"),
-		Clients:      make(map[*Client]bool),
-		Register:     make(chan *Client),
-		Unregister:   make(chan *Client),
-		Rooms:        make(map[string]*Room),
-		RoomByCode:   make(map[string]*Room),
-		vocabService: vocabService,
-		gameRepo:     gameRepo,
-		userRepo:     userRepo,
-		Redis:        redisAdapter,
-		proxyClients: make(map[string]*Client),
+		log:                 slog.Default().With("component", "WS"),
+		Clients:             make(map[*Client]bool),
+		Register:            make(chan *Client),
+		Unregister:          make(chan *Client),
+		Rooms:               make(map[string]*Room),
+		RoomByCode:          make(map[string]*Room),
+		vocabService:        vocabService,
+		gameRepo:            gameRepo,
+		userRepo:            userRepo,
+		Redis:               redisAdapter,
+		proxyClients:        make(map[string]*Client),
+		disconnectedPlayers: make(map[uuid.UUID]*DisconnectedPlayer),
 	}
 	h.Matchmaker = NewMatchmaker(h)
 	if redisAdapter != nil {
@@ -60,6 +74,12 @@ func (h *Hub) Run() {
 			h.mu.Lock()
 			h.Clients[client] = true
 			h.mu.Unlock()
+
+			// Check for reconnection (same user_id returning)
+			if h.tryReconnect(client) {
+				continue
+			}
+
 			h.log.Info("client connected", "player", client.Username, "user_id", client.ID, "total", len(h.Clients))
 
 		case client := <-h.Unregister:
@@ -71,8 +91,19 @@ func (h *Hub) Run() {
 			h.mu.Unlock()
 
 			h.Matchmaker.Remove(client)
+
+			// Grace period: if player was in a room during an active game, don't remove yet
 			if room := client.GetRoom(); room != nil {
-				room.RemovePlayer(client)
+				room.mu.Lock()
+				gameActive := room.State == StatePlaying || room.State == StateCountdown || room.State == StateRoundEnd
+				roomCode := room.Code
+				room.mu.Unlock()
+
+				if gameActive {
+					h.startGracePeriod(client, room, roomCode)
+				} else {
+					room.RemovePlayer(client)
+				}
 			}
 
 			// Clean up any cross-instance proxy mappings for this client
@@ -98,9 +129,109 @@ func (h *Hub) Run() {
 				h.mu.Unlock()
 			}
 
+
 			h.log.Info("client disconnected", "player", client.Username, "user_id", client.ID, "total", len(h.Clients))
 		}
 	}
+}
+
+func (h *Hub) startGracePeriod(client *Client, room *Room, roomCode string) {
+	h.mu.Lock()
+	// Enforce max cap
+	if len(h.disconnectedPlayers) >= maxDisconnectedPlayers {
+		h.mu.Unlock()
+		room.RemovePlayer(client)
+		h.log.Warn("grace period rejected: max disconnected players reached", "player", client.Username)
+		return
+	}
+
+	dp := &DisconnectedPlayer{
+		Client:   client,
+		Room:     room,
+		UserID:   client.ID,
+		RoomCode: roomCode,
+	}
+
+	dp.Timer = time.AfterFunc(reconnectGracePeriod, func() {
+		h.mu.Lock()
+		if existing, ok := h.disconnectedPlayers[client.ID]; ok && existing == dp {
+			delete(h.disconnectedPlayers, client.ID)
+		}
+		h.mu.Unlock()
+		room.RemovePlayer(client)
+		h.log.Info("grace period expired, player removed", "player", client.Username, "room_code", roomCode)
+	})
+
+	h.disconnectedPlayers[client.ID] = dp
+	h.mu.Unlock()
+
+	// Save routing info to Redis for cross-pod reconnect
+	if h.Redis != nil {
+		h.Redis.SetReconnectInfo(client.ID.String(), roomCode)
+	}
+
+	h.log.Info("grace period started", "player", client.Username, "room_code", roomCode, "ttl_s", 30)
+}
+
+func (h *Hub) tryReconnect(newClient *Client) bool {
+	h.mu.Lock()
+	dp, ok := h.disconnectedPlayers[newClient.ID]
+	if ok {
+		// Same pod reconnect: swap client directly
+		dp.Timer.Stop()
+		delete(h.disconnectedPlayers, newClient.ID)
+		h.mu.Unlock()
+
+		if dp.Room.ReconnectPlayer(dp.Client, newClient) {
+			// Clear Redis reconnect info
+			if h.Redis != nil {
+				h.Redis.ClearReconnectInfo(newClient.ID.String())
+			}
+
+			// Send current game state to the reconnected client
+			stateSync := dp.Room.GetGameStateSync(newClient)
+			newClient.SendMessage(WSMessage{Type: MsgGameStateSync, Data: stateSync})
+
+			h.log.Info("player reconnected (same pod)",
+				"player", newClient.Username,
+				"room_code", dp.RoomCode,
+			)
+			return true
+		}
+		h.log.Warn("reconnect failed: room rejected player", "player", newClient.Username)
+		return false
+	}
+	h.mu.Unlock()
+
+	// Cross-pod reconnect: check Redis
+	if h.Redis != nil {
+		info, found := h.Redis.GetReconnectInfo(newClient.ID.String())
+		if found && info.NodeID != h.Redis.NodeID {
+			// Room is on another pod — use existing proxy join mechanism
+			h.Redis.PublishToNode(info.NodeID, RedisMessage{
+				Type:     RedisProxyJoin,
+				FromNode: h.Redis.NodeID,
+				RoomCode: info.RoomCode,
+				UserID:   newClient.ID.String(),
+				Username: newClient.Username,
+			})
+			h.Redis.ClearReconnectInfo(newClient.ID.String())
+
+			h.mu.Lock()
+			proxyKey := newClient.ID.String() + ":" + info.RoomCode
+			h.proxyClients[proxyKey] = newClient
+			h.mu.Unlock()
+
+			h.log.Info("player reconnecting (cross-pod)",
+				"player", newClient.Username,
+				"room_code", info.RoomCode,
+				"target_node", info.NodeID,
+			)
+			return true
+		}
+	}
+
+	return false
 }
 
 func (h *Hub) HandleMessage(client *Client, msg WSMessage) {

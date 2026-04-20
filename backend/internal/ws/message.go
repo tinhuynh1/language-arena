@@ -28,12 +28,28 @@ const (
 	MsgGameOver        MessageType = "game_over"
 	MsgOpponentLeft    MessageType = "opponent_left"
 	MsgHostChanged     MessageType = "host_changed"
+	MsgGameStateSync   MessageType = "game_state_sync"
 	MsgError           MessageType = "error"
 )
 
 type RoundEndData struct {
 	Result   string `json:"result"`
 	NextInMs int    `json:"next_in_ms"`
+}
+
+type GameStateSyncData struct {
+	RoomCode      string   `json:"room_code"`
+	Mode          string   `json:"mode"`
+	State         string   `json:"state"`
+	Round         int      `json:"round"`
+	TotalRounds   int      `json:"total_rounds"`
+	Question      string   `json:"question"`
+	Targets       []Target `json:"targets"`
+	TimeMs        int      `json:"time_ms"`
+	ElapsedMs     int      `json:"elapsed_ms"`
+	YourScore     int      `json:"your_score"`
+	OpponentScore int      `json:"opponent_score"`
+	Players       []string `json:"players"`
 }
 
 type WSMessage struct {

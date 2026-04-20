@@ -633,6 +633,97 @@ func (r *Room) RemovePlayer(client *Client) {
 	}
 }
 
+func (r *Room) ReconnectPlayer(oldClient, newClient *Client) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if r.State == StateFinished {
+		return false
+	}
+
+	ps, ok := r.Players[oldClient]
+	if !ok {
+		return false
+	}
+
+	// Swap connection: keep score/reactions, replace client
+	ps.Client = newClient
+	delete(r.Players, oldClient)
+	r.Players[newClient] = ps
+	newClient.SetRoom(r)
+
+	r.log.Info("player reconnected",
+		"player", newClient.Username,
+		"round", r.CurrentRound,
+		"score", ps.Score,
+	)
+
+	return true
+}
+
+func (r *Room) GetGameStateSync(client *Client) GameStateSyncData {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	var state string
+	switch r.State {
+	case StateWaiting:
+		state = "waiting"
+	case StateCountdown:
+		state = "countdown"
+	case StatePlaying:
+		state = "playing"
+	case StateRoundEnd:
+		state = "round_end"
+	default:
+		state = "finished"
+	}
+
+	var question string
+	var targets []Target
+	elapsedMs := 0
+
+	if r.CurrentRound > 0 && r.CurrentRound <= len(r.Vocabs) {
+		vocabIdx := (r.CurrentRound - 1) % len(r.Vocabs)
+		correctVocab := r.Vocabs[vocabIdx]
+		question = r.getQuestion(correctVocab)
+		targets = r.generateTargets(correctVocab)
+		if r.State == StatePlaying {
+			elapsedMs = int(time.Since(r.RoundStartAt).Milliseconds())
+		}
+	}
+
+	var yourScore, opponentScore int
+	ps, ok := r.Players[client]
+	if ok {
+		yourScore = ps.Score
+	}
+
+	if r.Mode == model.ModeDuel {
+		for c, p := range r.Players {
+			if c != client {
+				opponentScore = p.Score
+				break
+			}
+		}
+	}
+
+	return GameStateSyncData{
+		RoomCode:      r.Code,
+		Mode:          string(r.Mode),
+		State:         state,
+		Round:         r.CurrentRound,
+		TotalRounds:   r.TotalRounds,
+		Question:      question,
+		Targets:       targets,
+		TimeMs:        roundTimeMs,
+		ElapsedMs:     elapsedMs,
+		YourScore:     yourScore,
+		OpponentScore: opponentScore,
+		Players:       r.getPlayerNames(),
+	}
+}
+
 func (r *Room) getPlayerNames() []string {
 	names := make([]string, 0, len(r.Players))
 	for c := range r.Players {

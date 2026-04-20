@@ -93,6 +93,49 @@ func (ra *RedisAdapter) LookupRoom(code string) (string, bool) {
 	return nodeID, true
 }
 
+// --- Reconnect Registry (TTL-based) ---
+
+const reconnectGracePeriod = 30 * time.Second
+
+type ReconnectInfo struct {
+	RoomCode string `json:"room_code"`
+	NodeID   string `json:"node_id"`
+}
+
+func reconnectKey(userID string) string {
+	return "lingo:reconnect:" + userID
+}
+
+func (ra *RedisAdapter) SetReconnectInfo(userID, roomCode string) {
+	ctx := context.Background()
+	info := ReconnectInfo{RoomCode: roomCode, NodeID: ra.NodeID}
+	data, err := json.Marshal(info)
+	if err != nil {
+		slog.Error("reconnect marshal error", "component", "REDIS", "err", err)
+		return
+	}
+	ra.client.Set(ctx, reconnectKey(userID), data, reconnectGracePeriod)
+	slog.Info("reconnect info saved", "component", "REDIS", "user_id", userID, "room_code", roomCode, "ttl_s", 30)
+}
+
+func (ra *RedisAdapter) GetReconnectInfo(userID string) (*ReconnectInfo, bool) {
+	ctx := context.Background()
+	data, err := ra.client.Get(ctx, reconnectKey(userID)).Result()
+	if err != nil {
+		return nil, false
+	}
+	var info ReconnectInfo
+	if err := json.Unmarshal([]byte(data), &info); err != nil {
+		return nil, false
+	}
+	return &info, true
+}
+
+func (ra *RedisAdapter) ClearReconnectInfo(userID string) {
+	ctx := context.Background()
+	ra.client.Del(ctx, reconnectKey(userID))
+}
+
 // --- Pub/Sub ---
 
 func nodeChannel(nodeID string) string {
