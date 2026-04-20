@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"log/slog"
 	"time"
 
@@ -10,7 +11,19 @@ import (
 
 const RequestIDKey = "request_id"
 
-// RequestID injects a unique X-Request-ID into each request.
+type contextKey string
+
+const requestIDCtxKey contextKey = "request_id"
+
+// RequestIDFromContext extracts request_id from context for downstream logging.
+func RequestIDFromContext(ctx context.Context) string {
+	if id, ok := ctx.Value(requestIDCtxKey).(string); ok {
+		return id
+	}
+	return ""
+}
+
+// RequestID injects a unique X-Request-ID into each request and propagates it into context.
 func RequestID() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.GetHeader("X-Request-ID")
@@ -19,11 +32,16 @@ func RequestID() gin.HandlerFunc {
 		}
 		c.Set(RequestIDKey, id)
 		c.Header("X-Request-ID", id)
+
+		// Propagate into context.Context for downstream use (repos, services)
+		ctx := context.WithValue(c.Request.Context(), requestIDCtxKey, id)
+		c.Request = c.Request.WithContext(ctx)
+
 		c.Next()
 	}
 }
 
-// RequestLogger logs every HTTP request with method, path, status, and latency.
+// RequestLogger logs every HTTP request with method, path, status, latency, and body size.
 func RequestLogger() gin.HandlerFunc {
 	log := slog.Default().With("component", "HTTP")
 	return func(c *gin.Context) {
@@ -41,6 +59,7 @@ func RequestLogger() gin.HandlerFunc {
 			"status", status,
 			"latency_ms", latency.Milliseconds(),
 			"ip", c.ClientIP(),
+			"response_bytes", c.Writer.Size(),
 		}
 
 		if reqID, ok := c.Get(RequestIDKey); ok {

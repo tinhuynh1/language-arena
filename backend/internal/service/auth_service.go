@@ -9,9 +9,19 @@ import (
 	"github.com/google/uuid"
 	"github.com/michael/language-arena/backend/internal/config"
 	"github.com/michael/language-arena/backend/internal/model"
-	"github.com/michael/language-arena/backend/internal/repository"
 	"golang.org/x/crypto/bcrypt"
 )
+
+// UserReader abstracts read operations on users.
+type UserReader interface {
+	FindByEmail(ctx context.Context, email string) (*model.User, error)
+	FindByID(ctx context.Context, id uuid.UUID) (*model.User, error)
+}
+
+// UserWriter abstracts write operations on users.
+type UserWriter interface {
+	Create(ctx context.Context, user *model.User) error
+}
 
 var (
 	ErrInvalidCredentials = errors.New("invalid email or password")
@@ -20,16 +30,17 @@ var (
 )
 
 type AuthService struct {
-	userRepo *repository.UserRepository
-	cfg      *config.JWTConfig
+	userReader UserReader
+	userWriter UserWriter
+	cfg        *config.JWTConfig
 }
 
-func NewAuthService(userRepo *repository.UserRepository, cfg *config.JWTConfig) *AuthService {
-	return &AuthService{userRepo: userRepo, cfg: cfg}
+func NewAuthService(reader UserReader, writer UserWriter, cfg *config.JWTConfig) *AuthService {
+	return &AuthService{userReader: reader, userWriter: writer, cfg: cfg}
 }
 
 func (s *AuthService) Register(ctx context.Context, req model.RegisterRequest) (*model.AuthResponse, error) {
-	existing, _ := s.userRepo.FindByEmail(ctx, req.Email)
+	existing, _ := s.userReader.FindByEmail(ctx, req.Email)
 	if existing != nil {
 		return nil, ErrUserExists
 	}
@@ -45,7 +56,7 @@ func (s *AuthService) Register(ctx context.Context, req model.RegisterRequest) (
 		PasswordHash: string(hash),
 	}
 
-	if err := s.userRepo.Create(ctx, user); err != nil {
+	if err := s.userWriter.Create(ctx, user); err != nil {
 		return nil, err
 	}
 
@@ -58,7 +69,7 @@ func (s *AuthService) Register(ctx context.Context, req model.RegisterRequest) (
 }
 
 func (s *AuthService) Login(ctx context.Context, req model.LoginRequest) (*model.AuthResponse, error) {
-	user, err := s.userRepo.FindByEmail(ctx, req.Email)
+	user, err := s.userReader.FindByEmail(ctx, req.Email)
 	if err != nil {
 		return nil, ErrInvalidCredentials
 	}

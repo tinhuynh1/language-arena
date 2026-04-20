@@ -13,22 +13,38 @@ import (
 	"github.com/michael/language-arena/backend/pkg/response"
 )
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin: func(r *http.Request) bool {
-		return true
-	},
-}
-
 type GameHandler struct {
 	hub      *ws.Hub
 	userRepo *repository.UserRepository
+	gameRepo *repository.GameRepository
 	authSvc  *service.AuthService
+	upgrader websocket.Upgrader
 }
 
-func NewGameHandler(hub *ws.Hub, userRepo *repository.UserRepository, authSvc *service.AuthService) *GameHandler {
-	return &GameHandler{hub: hub, userRepo: userRepo, authSvc: authSvc}
+func NewGameHandler(hub *ws.Hub, userRepo *repository.UserRepository, gameRepo *repository.GameRepository, authSvc *service.AuthService, allowedWSOrigins []string) *GameHandler {
+	originSet := make(map[string]struct{}, len(allowedWSOrigins))
+	for _, o := range allowedWSOrigins {
+		originSet[o] = struct{}{}
+	}
+
+	return &GameHandler{
+		hub:      hub,
+		userRepo: userRepo,
+		gameRepo: gameRepo,
+		authSvc:  authSvc,
+		upgrader: websocket.Upgrader{
+			ReadBufferSize:  1024,
+			WriteBufferSize: 1024,
+			CheckOrigin: func(r *http.Request) bool {
+				origin := r.Header.Get("Origin")
+				if origin == "" {
+					return true // Allow non-browser clients (curl, Postman)
+				}
+				_, ok := originSet[origin]
+				return ok
+			},
+		},
+	}
 }
 
 func (h *GameHandler) HandleWebSocket(c *gin.Context) {
@@ -52,7 +68,7 @@ func (h *GameHandler) HandleWebSocket(c *gin.Context) {
 		return
 	}
 
-	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
+	conn, err := h.upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		slog.Error("ws upgrade error", "component", "WS", "err", err, "user_id", userID)
 		return
@@ -76,9 +92,11 @@ func (h *GameHandler) GetGameHistory(c *gin.Context) {
 		return
 	}
 
-	gameRepo := repository.NewGameRepository(nil)
-	_ = gameRepo
-	_ = userID.(uuid.UUID)
+	games, err := h.gameRepo.FindByUserID(c.Request.Context(), userID.(uuid.UUID), 20)
+	if err != nil {
+		response.InternalError(c, "failed to fetch game history")
+		return
+	}
 
-	response.OK(c, gin.H{"games": []interface{}{}})
+	response.OK(c, gin.H{"games": games})
 }
