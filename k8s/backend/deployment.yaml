@@ -51,6 +51,10 @@ spec:
               value: "json"
             - name: GIN_MODE
               value: "release"
+            - name: CORS_ORIGINS
+              value: "https://lingosniper.lol"
+            - name: ALLOWED_WS_ORIGINS
+              value: "https://lingosniper.lol"
           resources:
             requests:
               cpu: "10m"
@@ -60,7 +64,7 @@ spec:
               memory: "256Mi"
           readinessProbe:
             httpGet:
-              path: /health
+              path: /ready
               port: 8080
             initialDelaySeconds: 5
             periodSeconds: 10
