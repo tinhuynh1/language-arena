@@ -170,9 +170,11 @@ export function useGame() {
           break;
         }
 
-        case 'round_end':
+        case 'round_end': {
+          const data = msg.data as { result: string; next_in_ms: number };
           updateStore({ state: 'round_end' });
           break;
+        }
 
         case 'game_over': {
           const data = msg.data as GameOverData;

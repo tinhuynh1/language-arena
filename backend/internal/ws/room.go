@@ -19,6 +19,11 @@ const (
 	countdownMs    = 3000
 	maxPlayers     = 100
 	graceMs        = 500
+
+	// Transition delays (non-blocking via time.AfterFunc)
+	delayAfterCorrect   = 300 * time.Millisecond
+	delayAfterTimeout   = 500 * time.Millisecond
+	delayAfterAllAnswer = 800 * time.Millisecond
 )
 
 type RoomState int
@@ -242,10 +247,14 @@ func (r *Room) nextRound() {
 			r.mu.Unlock()
 
 			r.broadcastLeaderboard()
-			r.broadcast(WSMessage{Type: MsgRoundEnd, Data: map[string]string{"result": "timeout"}})
+			r.broadcast(WSMessage{Type: MsgRoundEnd, Data: RoundEndData{
+				Result:   "timeout",
+				NextInMs: int(delayAfterTimeout.Milliseconds()),
+			}})
 
-			time.Sleep(2 * time.Second)
-			r.nextRound()
+			time.AfterFunc(delayAfterTimeout, func() {
+				r.nextRound()
+			})
 		} else {
 			r.mu.Unlock()
 		}
@@ -422,9 +431,15 @@ func (r *Room) HandleHit(client *Client, data TargetHitData) {
 		if r.RoundTimer != nil {
 			r.RoundTimer.Stop()
 		}
+		r.State = StateRoundEnd
 		go func() {
-			time.Sleep(1 * time.Second)
-			r.nextRound()
+			r.broadcast(WSMessage{Type: MsgRoundEnd, Data: RoundEndData{
+				Result:   "correct",
+				NextInMs: int(delayAfterCorrect.Milliseconds()),
+			}})
+			time.AfterFunc(delayAfterCorrect, func() {
+				r.nextRound()
+			})
 		}()
 	}
 
@@ -433,10 +448,16 @@ func (r *Room) HandleHit(client *Client, data TargetHitData) {
 		if r.RoundTimer != nil {
 			r.RoundTimer.Stop()
 		}
+		r.State = StateRoundEnd
 		go func() {
 			r.broadcastLeaderboard()
-			time.Sleep(2 * time.Second)
-			r.nextRound()
+			r.broadcast(WSMessage{Type: MsgRoundEnd, Data: RoundEndData{
+				Result:   "all_answered",
+				NextInMs: int(delayAfterAllAnswer.Milliseconds()),
+			}})
+			time.AfterFunc(delayAfterAllAnswer, func() {
+				r.nextRound()
+			})
 		}()
 	}
 }

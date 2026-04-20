@@ -31,6 +31,11 @@ const (
 	MsgError           MessageType = "error"
 )
 
+type RoundEndData struct {
+	Result   string `json:"result"`
+	NextInMs int    `json:"next_in_ms"`
+}
+
 type WSMessage struct {
 	Type MessageType `json:"type"`
 	Data interface{} `json:"data,omitempty"`
