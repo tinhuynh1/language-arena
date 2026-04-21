@@ -114,7 +114,7 @@ func (r *UserRepository) GetLeaderboard(ctx context.Context, limit int, offset i
 
 	// Get total count of eligible users
 	var totalCount int
-	countQuery := `SELECT COUNT(*) FROM users WHERE games_played > 0`
+	countQuery := `SELECT COUNT(*) FROM users WHERE games_played > 0 AND avg_reaction_ms > 0`
 	if err := r.db.QueryRowContext(ctx, countQuery).Scan(&totalCount); err != nil {
 		duration := time.Since(start)
 		r.log.Error("get leaderboard count failed", "op", "GetLeaderboard", "err", err, "duration_ms", duration.Milliseconds(), r.reqIDAttr(ctx))
@@ -122,7 +122,7 @@ func (r *UserRepository) GetLeaderboard(ctx context.Context, limit int, offset i
 	}
 
 	query := `SELECT id, username, avg_reaction_ms, total_correct, games_played, best_reaction_ms 
-	          FROM users WHERE games_played > 0 ORDER BY avg_reaction_ms ASC LIMIT $1 OFFSET $2`
+	          FROM users WHERE games_played > 0 AND avg_reaction_ms > 0 ORDER BY avg_reaction_ms ASC LIMIT $1 OFFSET $2`
 	rows, err := r.db.QueryContext(ctx, query, limit, offset)
 	if err != nil {
 		duration := time.Since(start)
