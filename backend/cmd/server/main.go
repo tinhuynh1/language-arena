@@ -3,12 +3,10 @@ package main
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
-	"sort"
 	"syscall"
 	"time"
 
@@ -50,7 +48,7 @@ func main() {
 	}
 	log.Info("database connected")
 
-	if err := runMigrations(db, log); err != nil {
+	if err := migration.Run(db); err != nil {
 		slog.Error("migration failed", "err", err)
 		os.Exit(1)
 	}
@@ -167,53 +165,6 @@ func setupRouter(
 	return r
 }
 
-func runMigrations(db *sql.DB, log *slog.Logger) error {
-	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS schema_migrations (
-		name VARCHAR(255) PRIMARY KEY,
-		applied_at TIMESTAMPTZ DEFAULT NOW()
-	)`); err != nil {
-		return fmt.Errorf("failed to create schema_migrations: %w", err)
-	}
-
-	entries, err := migration.Files.ReadDir(".")
-	if err != nil {
-		return fmt.Errorf("failed to read migration files: %w", err)
-	}
-
-	names := make([]string, 0, len(entries))
-	for _, e := range entries {
-		if !e.IsDir() && len(e.Name()) > 4 && e.Name()[len(e.Name())-4:] == ".sql" {
-			names = append(names, e.Name())
-		}
-	}
-	sort.Strings(names)
-
-	for _, name := range names {
-		var applied bool
-		if err := db.QueryRow(`SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE name = $1)`, name).Scan(&applied); err != nil {
-			return fmt.Errorf("failed to check migration %s: %w", name, err)
-		}
-		if applied {
-			continue
-		}
-
-		content, err := migration.Files.ReadFile(name)
-		if err != nil {
-			return fmt.Errorf("failed to read migration file %s: %w", name, err)
-		}
-
-		if _, err := db.Exec(string(content)); err != nil {
-			return fmt.Errorf("migration %s failed: %w", name, err)
-		}
-
-		if _, err := db.Exec(`INSERT INTO schema_migrations (name) VALUES ($1)`, name); err != nil {
-			return fmt.Errorf("failed to record migration %s: %w", name, err)
-		}
-		log.Info("migration applied", "file", name)
-	}
-
-	return nil
-}
 
 func healthProbe(db *sql.DB, cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
