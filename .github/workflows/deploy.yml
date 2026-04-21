@@ -6,6 +6,7 @@ on:
       - main
 
 env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   PROJECT_ID: lingo-sniper-prod
   GAR_LOCATION: asia-southeast1
   REGION: asia-southeast1-a
