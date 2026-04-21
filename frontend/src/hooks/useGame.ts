@@ -35,6 +35,7 @@ interface GameStore {
   totalRounds: number;
   question: string;
   targets: Target[];
+  claimedTargets: Record<string, string>;
   myCorrect: number;
   myAvgMs: number;
   opponentCorrect: number;
@@ -65,6 +66,7 @@ const initialStore: GameStore = {
   totalRounds: 10,
   question: '',
   targets: [],
+  claimedTargets: {},
   myCorrect: 0,
   myAvgMs: 0,
   opponentCorrect: 0,
@@ -156,6 +158,7 @@ export function useGame() {
             totalRounds: data.total,
             question: data.question,
             targets: data.targets,
+            claimedTargets: {},
             timeMs: data.time_ms,
           });
           break;
@@ -177,6 +180,18 @@ export function useGame() {
         case 'live_leaderboard': {
           const data = msg.data as LiveLeaderboardData;
           updateStore({ liveLeaderboard: data.players });
+          break;
+        }
+
+        case 'target_claimed': {
+          const data = msg.data as { target_id: string; claimed_by: string };
+          setStore((prev) => ({
+            ...prev,
+            claimedTargets: {
+              ...prev.claimedTargets,
+              [data.target_id]: data.claimed_by,
+            },
+          }));
           break;
         }
 
@@ -221,6 +236,7 @@ export function useGame() {
             totalRounds: data.total_rounds,
             question: data.question,
             targets: data.targets,
+            claimedTargets: {},
             timeMs: data.time_ms,
             myCorrect: data.your_correct,
             myAvgMs: data.your_avg_ms,

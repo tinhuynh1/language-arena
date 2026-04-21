@@ -15,8 +15,9 @@ interface GameCanvasProps {
   opponent: string;
   mode: 'solo' | 'duel' | 'battle';
   lastReactionMs: number;
-  lastIsCorrect: boolean;
-  onHit: (targetId: string) => number;
+  lastIsCorrect: boolean | null;
+  onHit: (target: Target, reactionMs: number) => void;
+  claimedTargets: Record<string, string>;
 }
 
 const QUIZ_LABELS: Record<QuizType, string> = {
@@ -91,6 +92,7 @@ export default function GameCanvas({
   lastReactionMs,
   lastIsCorrect,
   onHit,
+  claimedTargets,
 }: GameCanvasProps) {
   const [hitTargets, setHitTargets] = useState<Set<string>>(new Set());
   const [answered, setAnswered] = useState(false);
@@ -125,7 +127,7 @@ export default function GameCanvas({
   const handleTargetClick = useCallback((target: Target, e: React.MouseEvent) => {
     if (answered || isTimeUp) return;
 
-    const reactionMs = onHit(target.id);
+    onHit(target, 0);
 
     setHitTargets(prev => new Set(prev).add(target.id));
     setAnswered(true);
@@ -333,13 +335,16 @@ export default function GameCanvas({
       <div className="absolute top-[12rem] sm:top-[14rem] left-0 right-0 bottom-6 z-10">
         {targets.map(target => {
           const isHit = hitTargets.has(target.id);
+          const isClaimed = !!claimedTargets[target.id];
+          const shouldHide = isHit || isClaimed;
+
           return (
             <button
               key={target.id}
               onClick={(e) => handleTargetClick(target, e)}
-              disabled={answered || isTimeUp}
+              disabled={answered || isTimeUp || shouldHide}
               className={`absolute transition-all duration-200 group focus-visible:ring-2 focus-visible:ring-[#00ff88] focus-visible:outline-none rounded-sm
-                ${isHit
+                ${shouldHide
                   ? 'target-hit opacity-0 pointer-events-none'
                   : 'target-spawn cursor-crosshair'
                 }`}
@@ -349,7 +354,7 @@ export default function GameCanvas({
                 transform: 'translate(-50%, -50%)',
               }}
             >
-              {!isHit && (
+              {!shouldHide && (
                 <div className="relative">
                   {/* Outer glow ring */}
                   <div className="absolute -inset-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200" style={{
