@@ -128,7 +128,7 @@ type MessageHandler = (msg: WSMessage) => void;
 const MAX_RECONNECT_ATTEMPTS = 5;
 const RECONNECT_BASE_DELAY_MS = 1000;
 
-export function useWebSocket() {
+export function useWebSocket(onAuthFailed?: () => void) {
   const wsRef = useRef<WebSocket | null>(null);
   const [connected, setConnected] = useState(false);
   const handlersRef = useRef<Set<MessageHandler>>(new Set());
@@ -136,6 +136,8 @@ export function useWebSocket() {
   const reconnectAttempts = useRef(0);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const intentionalClose = useRef(false);
+  const onAuthFailedRef = useRef(onAuthFailed);
+  onAuthFailedRef.current = onAuthFailed;
 
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN || wsRef.current?.readyState === WebSocket.CONNECTING) return;
@@ -185,6 +187,22 @@ export function useWebSocket() {
       clearTimeout(connectTimeout);
       setConnected(false);
       console.log('[WS] Disconnected, code:', event.code, 'reason:', event.reason);
+
+      // HTTP 401 before WS upgrade: close code 1006 with no reason on first attempt
+      if (!intentionalClose.current && event.code === 1006 && reconnectAttempts.current === 0) {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          onAuthFailedRef.current?.();
+          return;
+        }
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          if (!payload.exp || payload.exp * 1000 <= Date.now()) {
+            onAuthFailedRef.current?.();
+            return;
+          }
+        } catch { /* ignore parse errors */ }
+      }
 
       // Auto-reconnect on unexpected disconnect (covers F5, network drop, etc.)
       if (!intentionalClose.current && reconnectAttempts.current < MAX_RECONNECT_ATTEMPTS) {

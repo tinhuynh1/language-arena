@@ -215,9 +215,9 @@ export default function PlayPage() {
           {/* Language Selection */}
           <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6 sm:mb-8 animate-fade-in-up delay-200">
             {[
-              { lang: 'en', flag: '🇬🇧', label: 'English (CEFR)' },
-              { lang: 'zh', flag: '🇨🇳', label: 'Chinese (HSK)' },
-            ].map(({ lang, flag, label }) => {
+              { lang: 'en', flagCode: 'gb', label: 'English (CEFR)' },
+              { lang: 'zh', flagCode: 'cn', label: 'Chinese (HSK)' },
+            ].map(({ lang, flagCode, label }) => {
               const isSelected = selectedLang === lang;
               return (
                 <button
@@ -230,7 +230,15 @@ export default function PlayPage() {
                     boxShadow: isSelected ? '0 0 24px rgba(0,212,255,0.15), inset 0 0 20px rgba(0,212,255,0.08)' : undefined,
                   }}
                 >
-                  <div className="text-3xl sm:text-4xl mb-2">{flag}</div>
+                  <div className="mb-2 flex justify-center">
+                    <img
+                      src={`https://flagcdn.com/w80/${flagCode}.png`}
+                      alt={label}
+                      width={48}
+                      height={32}
+                      style={{ borderRadius: 4, objectFit: 'cover' }}
+                    />
+                  </div>
                   <div className="font-heading font-bold uppercase text-sm sm:text-base tracking-wide" style={{ color: isSelected ? '#00d4ff' : 'inherit' }}>
                     {label}
                   </div>

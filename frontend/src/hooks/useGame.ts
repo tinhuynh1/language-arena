@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   useWebSocket,
   type WSMessage,
@@ -84,7 +85,12 @@ const initialStore: GameStore = {
 
 export function useGame() {
   const [store, setStore] = useState<GameStore>(initialStore);
-  const ws = useWebSocket();
+  const router = useRouter();
+  const ws = useWebSocket(() => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    router.push('/login');
+  });
   const roundStartTimeRef = useRef<number>(0);
 
   const updateStore = useCallback((update: Partial<GameStore>) => {
