@@ -11,7 +11,7 @@ export default function LiveLeaderboard({ players, round }: LiveLeaderboardProps
   if (!players || players.length === 0) return null;
 
   return (
-    <div className="absolute top-20 right-4 z-30 w-56">
+    <div className="absolute top-20 right-4 z-30 w-64">
       <div className="text-xs font-heading uppercase tracking-widest text-[var(--color-text-muted)] mb-2 text-right">
         Live Ranking
       </div>
@@ -32,15 +32,22 @@ export default function LiveLeaderboard({ players, round }: LiveLeaderboardProps
               }}>
                 #{p.rank}
               </span>
-              <span className="font-heading font-bold truncate max-w-[100px]" style={{
+              <span className="font-heading font-bold truncate max-w-[80px]" style={{
                 color: i === 0 ? '#00ff88' : 'var(--color-text-primary)',
               }}>
                 {p.username}
               </span>
             </div>
-            <span className="font-mono font-bold" style={{ color: '#00ff88' }}>
-              {p.score}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="font-mono font-bold" style={{ color: '#00ff88' }}>
+                {p.correct_count}
+              </span>
+              {p.avg_reaction_ms > 0 && (
+                <span className="font-mono text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                  {p.avg_reaction_ms}ms
+                </span>
+              )}
+            </div>
           </div>
         ))}
       </div>

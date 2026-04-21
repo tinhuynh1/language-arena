@@ -1,18 +1,24 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { api, type LeaderboardEntry } from '@/lib/api';
+import { useEffect, useState, useCallback } from 'react';
+import { api, type LeaderboardEntry, type LeaderboardResponse } from '@/lib/api';
 
 const MEDAL_COLORS = ['#ffd700', '#c0c0c0', '#cd7f32'];
 const MEDAL_GLOW = ['rgba(255,215,0,0.5)', 'rgba(192,192,192,0.5)', 'rgba(205,127,50,0.5)'];
 const MEDAL_BG = ['rgba(255,215,0,0.05)', 'rgba(192,192,192,0.05)', 'rgba(205,127,50,0.05)'];
 const MEDAL_LABELS = ['Gold', 'Silver', 'Bronze'];
+const PER_PAGE = 10;
 
 function reactionColor(ms: number) {
   if (ms <= 0) return 'var(--color-text-muted)';
   if (ms < 500) return '#00ff88';
   if (ms < 1000) return '#ffd700';
   return '#ff3548';
+}
+
+function formatMs(ms: number) {
+  if (ms <= 0) return '—';
+  return `${ms.toLocaleString()}ms`;
 }
 
 function SkeletonRow() {
@@ -30,16 +36,29 @@ function SkeletonRow() {
 export default function LeaderboardPage() {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
 
-  useEffect(() => {
-    api.leaderboard.get(50)
-      .then(setEntries)
+  const fetchPage = useCallback((p: number) => {
+    setLoading(true);
+    api.leaderboard.get(p, PER_PAGE)
+      .then((res: LeaderboardResponse) => {
+        setEntries(res.entries);
+        setTotal(res.total);
+        setPage(res.page);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
 
-  const top3 = entries.slice(0, 3);
-  const rest = entries.slice(3);
+  useEffect(() => {
+    fetchPage(1);
+  }, [fetchPage]);
+
+  const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
+  const isFirstPage = page === 1;
+  const top3 = isFirstPage ? entries.slice(0, 3) : [];
+  const rest = isFirstPage ? entries.slice(3) : entries;
 
   return (
     <div className="relative min-h-screen px-4 sm:px-6 py-12 overflow-hidden">
@@ -76,7 +95,7 @@ export default function LeaderboardPage() {
             Leader<span className="text-glow-cyan" style={{ color: '#00d4ff' }}>board</span>
           </h1>
           <p className="text-sm font-heading tracking-widest text-[var(--color-text-muted)] mt-4">
-            TOP SNIPERS RANKED BY TOTAL SCORE
+            TOP SNIPERS RANKED BY FASTEST REACTION TIME
           </p>
         </div>
 
@@ -92,11 +111,10 @@ export default function LeaderboardPage() {
           </div>
         ) : (
           <div className="relative z-10">
-            {/* Podium — top 3 */}
+            {/* Podium — top 3 (only on first page) */}
             {top3.length > 0 && (
               <div className="grid grid-cols-3 gap-3 sm:gap-6 mb-12 motion-safe:animate-fade-in-up delay-100 items-end px-2 sm:px-10" aria-label="Top 3 players">
                 {[
-                  /* reorder: 2nd, 1st, 3rd */
                   top3[1] ?? null,
                   top3[0] ?? null,
                   top3[2] ?? null,
@@ -107,16 +125,13 @@ export default function LeaderboardPage() {
                   const glow = MEDAL_GLOW[idx] ?? 'rgba(136,136,136,0.5)';
                   const bg = MEDAL_BG[idx] ?? 'transparent';
                   
-                  // Heights for the podium blocks: 1st is tallest, 2nd mid, 3rd lowest
                   const heights = ['h-28', 'h-40', 'h-24'];
                   const orderHeight = slot === 1 ? heights[1] : slot === 0 ? heights[0] : heights[2];
                   
                   return (
                     <div key={entry.user_id} className="flex flex-col items-center gap-4 transition-transform duration-300 hover:-translate-y-2">
-                      {/* Player Info */}
                       <div className="flex flex-col items-center text-center">
                         <div className="relative mb-3">
-                          {/* Inner Avatar */}
                           <div className="w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center border-2 font-heading font-bold text-2xl relative z-10"
                                style={{ 
                                  borderColor: color, 
@@ -127,7 +142,6 @@ export default function LeaderboardPage() {
                                }}>
                             {entry.username[0]?.toUpperCase()}
                           </div>
-                          {/* Rank badge overlapping avatar */}
                           <div className="absolute -bottom-2 -right-2 w-6 h-6 flex items-center justify-center font-heading font-bold text-xs z-20"
                                style={{ background: color, color: '#000', borderRadius: '50%', boxShadow: `0 0 10px ${color}` }}>
                             {entry.rank}
@@ -136,12 +150,11 @@ export default function LeaderboardPage() {
                         <div className="font-heading font-bold text-base uppercase tracking-wider truncate w-full px-1" style={{ color, textShadow: `0 0 10px ${glow}` }}>
                           {entry.username}
                         </div>
-                        <div className="font-mono font-bold text-sm mt-1" style={{ color: '#00ff88', textShadow: '0 0 10px rgba(0,255,136,0.3)' }}>
-                          {entry.total_score.toLocaleString()} <span className="text-[10px] text-[var(--color-text-muted)] tracking-widest text-shadow-none">PTS</span>
+                        <div className="font-mono font-bold text-sm mt-1" style={{ color: reactionColor(entry.avg_reaction_ms), textShadow: `0 0 10px ${reactionColor(entry.avg_reaction_ms)}33` }}>
+                          {formatMs(entry.avg_reaction_ms)} <span className="text-[10px] text-[var(--color-text-muted)] tracking-widest">AVG</span>
                         </div>
                       </div>
 
-                      {/* Animated Podium Block */}
                       <div
                         className={`w-full ${orderHeight} flex items-end justify-center pb-4 tracking-widest relative overflow-hidden`}
                         style={{ 
@@ -171,13 +184,13 @@ export default function LeaderboardPage() {
                  role="row">
               <div className="col-span-1 hidden sm:block" role="columnheader">Rank</div>
               <div className="col-span-2 sm:col-span-1 block sm:hidden" role="columnheader">#</div>
-              <div className="col-span-5 sm:col-span-4" role="columnheader">Player</div>
-              <div className="col-span-3 text-right" role="columnheader">Score</div>
-              <div className="col-span-2 text-right hidden sm:block" role="columnheader">Matches</div>
-              <div className="col-span-2  sm:col-span-2 text-right" role="columnheader">Best MS</div>
+              <div className="col-span-4 sm:col-span-3" role="columnheader">Player</div>
+              <div className="col-span-3 sm:col-span-3 text-right" role="columnheader">Avg Reaction</div>
+              <div className="col-span-2 text-right hidden sm:block" role="columnheader">Games</div>
+              <div className="col-span-3 sm:col-span-3 text-right" role="columnheader">Best</div>
             </div>
 
-            {/* Rows 4+ */}
+            {/* Rows */}
             <div className="space-y-2 relative" role="table" aria-label="Leaderboard Ranking">
               {rest.map((entry, i) => (
                 <div
@@ -195,7 +208,7 @@ export default function LeaderboardPage() {
                     {entry.rank.toString().padStart(2, '0')}
                   </div>
                   
-                  <div className="col-span-5 sm:col-span-4 flex items-center gap-3 overflow-hidden" role="cell">
+                  <div className="col-span-4 sm:col-span-3 flex items-center gap-3 overflow-hidden" role="cell">
                     <div className="w-6 h-6 hidden sm:flex items-center justify-center shrink-0 text-[10px] font-heading font-bold"
                          style={{ background: 'rgba(0,212,255,0.1)', color: '#00d4ff', border: '1px solid rgba(0,212,255,0.2)' }}>
                       {entry.username[0]?.toUpperCase()}
@@ -205,8 +218,8 @@ export default function LeaderboardPage() {
                     </span>
                   </div>
                   
-                  <div className="col-span-3 text-right font-mono font-bold text-sm sm:text-base" style={{ color: '#00ff88' }} role="cell">
-                    {entry.total_score.toLocaleString()}
+                  <div className="col-span-3 sm:col-span-3 text-right font-mono font-bold text-sm sm:text-base" style={{ color: reactionColor(entry.avg_reaction_ms) }} role="cell">
+                    {formatMs(entry.avg_reaction_ms)}
                   </div>
                   
                   <div className="col-span-2 text-right font-mono text-xs text-[var(--color-text-secondary)] hidden sm:block" role="cell">
@@ -214,14 +227,54 @@ export default function LeaderboardPage() {
                   </div>
                   
                   <div
-                    className="col-span-2 sm:col-span-2 text-right font-mono font-bold text-xs"
+                    className="col-span-3 sm:col-span-3 text-right font-mono font-bold text-xs"
                     style={{ color: reactionColor(entry.best_reaction_ms) }}
                     role="cell"
                   >
-                    {entry.best_reaction_ms > 0 ? `${entry.best_reaction_ms.toLocaleString()}ms` : '—'}
+                    {formatMs(entry.best_reaction_ms)}
                   </div>
                 </div>
               ))}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-4 mt-8 motion-safe:animate-fade-in-up">
+                <button
+                  onClick={() => fetchPage(page - 1)}
+                  disabled={page <= 1}
+                  className="px-4 py-2 font-heading font-bold text-sm uppercase tracking-wider border transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                  style={{
+                    borderColor: 'rgba(0,212,255,0.3)',
+                    color: '#00d4ff',
+                    background: 'rgba(0,212,255,0.05)',
+                    borderRadius: '3px',
+                  }}
+                >
+                  ← Prev
+                </button>
+                <span className="font-mono text-sm text-[var(--color-text-muted)]">
+                  Page <span className="text-[var(--color-text-primary)] font-bold">{page}</span> / {totalPages}
+                </span>
+                <button
+                  onClick={() => fetchPage(page + 1)}
+                  disabled={page >= totalPages}
+                  className="px-4 py-2 font-heading font-bold text-sm uppercase tracking-wider border transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                  style={{
+                    borderColor: 'rgba(0,212,255,0.3)',
+                    color: '#00d4ff',
+                    background: 'rgba(0,212,255,0.05)',
+                    borderRadius: '3px',
+                  }}
+                >
+                  Next →
+                </button>
+              </div>
+            )}
+
+            {/* Total count */}
+            <div className="text-center mt-4 text-xs font-mono text-[var(--color-text-muted)]">
+              {total} snipers ranked
             </div>
           </div>
         )}

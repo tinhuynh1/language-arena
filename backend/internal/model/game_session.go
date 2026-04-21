@@ -29,7 +29,8 @@ type LeaderboardEntry struct {
 	Rank           int       `json:"rank"`
 	UserID         uuid.UUID `json:"user_id"`
 	Username       string    `json:"username"`
-	TotalScore     int64     `json:"total_score"`
+	AvgReactionMs  int       `json:"avg_reaction_ms"`
+	TotalCorrect   int       `json:"total_correct"`
 	GamesPlayed    int       `json:"games_played"`
 	BestReactionMs int       `json:"best_reaction_ms"`
 }

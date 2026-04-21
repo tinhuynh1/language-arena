@@ -11,7 +11,8 @@ export interface User {
   id: string;
   username: string;
   email: string;
-  total_score: number;
+  avg_reaction_ms: number;
+  total_correct: number;
   games_played: number;
   best_reaction_ms: number;
   created_at: string;
@@ -35,9 +36,17 @@ export interface LeaderboardEntry {
   rank: number;
   user_id: string;
   username: string;
-  total_score: number;
+  avg_reaction_ms: number;
+  total_correct: number;
   games_played: number;
   best_reaction_ms: number;
+}
+
+export interface LeaderboardResponse {
+  entries: LeaderboardEntry[];
+  total: number;
+  page: number;
+  per_page: number;
 }
 
 function getToken(): string | null {
@@ -75,7 +84,7 @@ export const api = {
     get: (lang: string) => apiFetch<Vocabulary[]>(`/api/v1/vocab?lang=${lang}`),
   },
   leaderboard: {
-    get: (limit = 20) => apiFetch<LeaderboardEntry[]>(`/api/v1/leaderboard?limit=${limit}`),
+    get: (page = 1, limit = 10) => apiFetch<LeaderboardResponse>(`/api/v1/leaderboard?page=${page}&limit=${limit}`),
   },
   stats: {
     me: () => apiFetch<{ user: User; recent_games: unknown[] }>('/api/v1/stats/me'),

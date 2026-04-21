@@ -24,20 +24,31 @@ func NewLeaderboardHandler(leaderboardService *service.LeaderboardService) *Lead
 }
 
 func (h *LeaderboardHandler) GetLeaderboard(c *gin.Context) {
-	limitStr := c.DefaultQuery("limit", "20")
+	limitStr := c.DefaultQuery("limit", "10")
 	limit, err := strconv.Atoi(limitStr)
 	if err != nil || limit <= 0 || limit > 100 {
-		limit = 20
+		limit = 10
 	}
 
-	entries, err := h.leaderboardService.GetTopPlayers(c.Request.Context(), limit)
+	pageStr := c.DefaultQuery("page", "1")
+	page, err := strconv.Atoi(pageStr)
+	if err != nil || page <= 0 {
+		page = 1
+	}
+
+	entries, total, err := h.leaderboardService.GetTopPlayers(c.Request.Context(), limit, page)
 	if err != nil {
-		h.log.Error("get leaderboard failed", "limit", limit, "err", err, "request_id", middleware.RequestIDFromContext(c.Request.Context()))
+		h.log.Error("get leaderboard failed", "limit", limit, "page", page, "err", err, "request_id", middleware.RequestIDFromContext(c.Request.Context()))
 		response.InternalError(c, "failed to fetch leaderboard")
 		return
 	}
 
-	response.OK(c, entries)
+	response.OK(c, gin.H{
+		"entries":  entries,
+		"total":    total,
+		"page":     page,
+		"per_page": limit,
+	})
 }
 
 func (h *LeaderboardHandler) GetMyStats(c *gin.Context) {

@@ -49,9 +49,9 @@ export default function GameOverScreen({ data, mode, username, onPlayAgain, onLe
   const titleColor = () => {
     if (mode === 'solo') return '#00ff88';
     if (mode === 'battle') {
-      if (myRank === 1) return '#ffd700'; // Gold
-      if (myRank === 2) return '#c0c0c0'; // Silver
-      if (myRank === 3) return '#cd7f32'; // Bronze
+      if (myRank === 1) return '#ffd700';
+      if (myRank === 2) return '#c0c0c0';
+      if (myRank === 3) return '#cd7f32';
       return '#00d4ff';
     }
     return isWinner ? '#00ff88' : '#ff3548';
@@ -71,18 +71,18 @@ export default function GameOverScreen({ data, mode, username, onPlayAgain, onLe
         </div>
       </div>
 
-      {/* Score */}
+      {/* Correct Answers */}
       <div className="flex items-center gap-12">
         <div className="text-center">
-          <div className="text-sm text-[var(--color-text-muted)] font-heading uppercase tracking-wider mb-1">Your Score</div>
-          <div className="text-5xl font-heading font-bold" style={{ color: '#00ff88' }}>{data.your_score}</div>
+          <div className="text-sm text-[var(--color-text-muted)] font-heading uppercase tracking-wider mb-1">Correct</div>
+          <div className="text-5xl font-heading font-bold" style={{ color: '#00ff88' }}>{data.your_correct}</div>
         </div>
         {mode === 'duel' && (
           <>
             <div className="text-3xl font-heading text-[var(--color-text-muted)]">VS</div>
             <div className="text-center">
               <div className="text-sm text-[var(--color-text-muted)] font-heading uppercase tracking-wider mb-1">Opponent</div>
-              <div className="text-5xl font-heading font-bold" style={{ color: '#ff6b35' }}>{data.opponent_score}</div>
+              <div className="text-5xl font-heading font-bold" style={{ color: '#ff6b35' }}>{data.opponent_correct}</div>
             </div>
           </>
         )}
@@ -132,7 +132,12 @@ export default function GameOverScreen({ data, mode, username, onPlayAgain, onLe
                       {p.username} {isMe && '(You)'}
                     </span>
                   </div>
-                  <span className="font-mono font-bold text-lg" style={{ color: '#00ff88' }}>{p.score}</span>
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono font-bold text-lg" style={{ color: '#00ff88' }}>{p.correct_count}</span>
+                    {p.avg_reaction_ms > 0 && (
+                      <span className="font-mono text-sm" style={{ color: 'var(--color-text-muted)' }}>{p.avg_reaction_ms}ms</span>
+                    )}
+                  </div>
                 </div>
               );
             })}

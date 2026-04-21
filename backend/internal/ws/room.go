@@ -37,11 +37,12 @@ const (
 )
 
 type PlayerState struct {
-	Client    *Client
-	Score     int
-	Reactions []int
-	Ready     bool
-	Answered  bool
+	Client       *Client
+	CorrectCount int
+	Reactions    []int // only correct-hit reaction times
+	AllReactions []int // all reactions including penalty (5000ms) for wrong answers
+	Ready        bool
+	Answered     bool
 }
 
 type Room struct {
@@ -116,11 +117,12 @@ func (r *Room) AddPlayer(client *Client) bool {
 	}
 
 	r.Players[client] = &PlayerState{
-		Client:    client,
-		Score:     0,
-		Reactions: make([]int, 0),
-		Ready:     false,
-		Answered:  false,
+		Client:       client,
+		CorrectCount: 0,
+		Reactions:    make([]int, 0),
+		AllReactions: make([]int, 0),
+		Ready:        false,
+		Answered:     false,
 	}
 	client.SetRoom(r)
 	return true
@@ -366,41 +368,39 @@ func (r *Room) HandleHit(client *Client, data TargetHitData) {
 	ps.Answered = true
 
 	if isCorrect {
-		points := calculateScore(data.ReactionMs)
-		ps.Score += points
+		ps.CorrectCount++
 		ps.Reactions = append(ps.Reactions, data.ReactionMs)
+		ps.AllReactions = append(ps.AllReactions, data.ReactionMs)
 		r.log.Info("correct hit",
 			"player", client.Username,
 			"round", r.CurrentRound,
 			"reaction_ms", data.ReactionMs,
-			"points", points,
-			"total_score", ps.Score,
+			"correct_count", ps.CorrectCount,
 		)
 	} else {
-		ps.Score -= 50
-		if ps.Score < 0 {
-			ps.Score = 0
-		}
+		// Penalty: count wrong answer as max reaction time
+		ps.AllReactions = append(ps.AllReactions, roundTimeMs)
 		r.log.Info("wrong hit",
 			"player", client.Username,
 			"round", r.CurrentRound,
-			"penalty", 50,
-			"total_score", ps.Score,
+			"penalty_ms", roundTimeMs,
+			"correct_count", ps.CorrectCount,
 		)
 	}
 
+	playerAvgMs := avgReaction(ps.AllReactions)
+
 	// Send personal score update to the player
 	if r.Mode == model.ModeDuel {
-		// For duel, send opponent score
 		for otherClient, otherPS := range r.Players {
-			var opponentScore int
+			var opponentCorrect, opponentAvgMs int
 			for c, p := range r.Players {
 				if c != otherClient {
-					opponentScore = p.Score
+					opponentCorrect = p.CorrectCount
+					opponentAvgMs = avgReaction(p.AllReactions)
 					break
 				}
 			}
-			// Only show reaction time to the player who hit
 			var reactionMs int
 			if otherClient == client {
 				reactionMs = data.ReactionMs
@@ -408,20 +408,24 @@ func (r *Room) HandleHit(client *Client, data TargetHitData) {
 			otherClient.SendMessage(WSMessage{
 				Type: MsgScoreUpdate,
 				Data: ScoreUpdateData{
-					You:        otherPS.Score,
-					Opponent:   opponentScore,
-					LastHitBy:  client.Username,
-					ReactionMs: reactionMs,
+					YourCorrect:     otherPS.CorrectCount,
+					YourAvgMs:       avgReaction(otherPS.AllReactions),
+					OpponentCorrect: opponentCorrect,
+					OpponentAvgMs:   opponentAvgMs,
+					LastHitBy:       client.Username,
+					ReactionMs:      reactionMs,
+					IsCorrect:       isCorrect,
 				},
 			})
 		}
 	} else {
-		// Solo/Battle: just send personal score
 		client.SendMessage(WSMessage{
 			Type: MsgScoreUpdate,
 			Data: ScoreUpdateData{
-				You:        ps.Score,
-				ReactionMs: data.ReactionMs,
+				YourCorrect: ps.CorrectCount,
+				YourAvgMs:   playerAvgMs,
+				ReactionMs:  data.ReactionMs,
+				IsCorrect:   isCorrect,
 			},
 		})
 	}
@@ -484,43 +488,45 @@ func (r *Room) finishGame() {
 
 	var winner string
 	if len(ranking) > 0 {
-		if r.Mode != model.ModeDuel || ranking[0].Score > 0 {
+		if r.Mode != model.ModeDuel || ranking[0].CorrectCount > 0 {
 			winner = ranking[0].Username
 		}
-		if r.Mode == model.ModeDuel && len(ranking) >= 2 && ranking[0].Score == ranking[1].Score {
+		if r.Mode == model.ModeDuel && len(ranking) >= 2 && ranking[0].CorrectCount == ranking[1].CorrectCount && ranking[0].AvgReactionMs == ranking[1].AvgReactionMs {
 			winner = "draw"
 		}
 	}
 
 	r.mu.Unlock()
 
-	// Send personalized game over to each player
 	for client, ps := range r.Players {
-		var opponentScore int
+		var opponentCorrect, opponentAvgMs int
 		if r.Mode == model.ModeDuel {
 			for c, p := range r.Players {
 				if c != client {
-					opponentScore = p.Score
+					opponentCorrect = p.CorrectCount
+					opponentAvgMs = avgReaction(p.AllReactions)
 					break
 				}
 			}
 		}
 
-		avgReaction := avgReaction(ps.Reactions)
+		playerAvgMs := avgReaction(ps.AllReactions)
 		accuracy := 0
 		if r.TotalRounds > 0 {
-			accuracy = len(ps.Reactions) * 100 / r.TotalRounds
+			accuracy = ps.CorrectCount * 100 / r.TotalRounds
 		}
 
 		client.SendMessage(WSMessage{
 			Type: MsgGameOver,
 			Data: GameOverData{
-				Winner:        winner,
-				YourScore:     ps.Score,
-				OpponentScore: opponentScore,
+				Winner:          winner,
+				YourCorrect:     ps.CorrectCount,
+				YourAvgMs:       playerAvgMs,
+				OpponentCorrect: opponentCorrect,
+				OpponentAvgMs:   opponentAvgMs,
 				Stats: GameOverStats{
 					TotalRounds:   r.TotalRounds,
-					AvgReactionMs: avgReaction,
+					AvgReactionMs: playerAvgMs,
 					Accuracy:      accuracy,
 				},
 				Ranking: ranking,
@@ -535,7 +541,6 @@ func (r *Room) finishGame() {
 		"total_rounds", r.TotalRounds,
 	)
 
-	// Persist results to database
 	if r.Hub != nil {
 		go r.Hub.SaveGameResults(r, ranking)
 		go r.Hub.RemoveRoom(r)
@@ -544,23 +549,33 @@ func (r *Room) finishGame() {
 
 func (r *Room) getRanking() []LeaderboardPlayerData {
 	type entry struct {
-		username string
-		score    int
+		username     string
+		correctCount int
+		avgMs        int
 	}
 	entries := make([]entry, 0, len(r.Players))
 	for _, ps := range r.Players {
-		entries = append(entries, entry{username: ps.Client.Username, score: ps.Score})
+		entries = append(entries, entry{
+			username:     ps.Client.Username,
+			correctCount: ps.CorrectCount,
+			avgMs:        avgReaction(ps.AllReactions),
+		})
 	}
+	// Sort by correct count DESC, then avg reaction ASC (lower is better)
 	sort.Slice(entries, func(i, j int) bool {
-		return entries[i].score > entries[j].score
+		if entries[i].correctCount != entries[j].correctCount {
+			return entries[i].correctCount > entries[j].correctCount
+		}
+		return entries[i].avgMs < entries[j].avgMs
 	})
 
 	ranking := make([]LeaderboardPlayerData, len(entries))
 	for i, e := range entries {
 		ranking[i] = LeaderboardPlayerData{
-			Rank:     i + 1,
-			Username: e.username,
-			Score:    e.score,
+			Rank:          i + 1,
+			Username:      e.username,
+			CorrectCount:  e.correctCount,
+			AvgReactionMs: e.avgMs,
 		}
 	}
 	return ranking
@@ -651,7 +666,7 @@ func (r *Room) ReconnectPlayer(oldClient, newClient *Client) bool {
 		return false
 	}
 
-	// Swap connection: keep score/reactions, replace client
+	// Swap connection: keep correct count/reactions, replace client
 	ps.Client = newClient
 	delete(r.Players, oldClient)
 	r.Players[newClient] = ps
@@ -660,7 +675,7 @@ func (r *Room) ReconnectPlayer(oldClient, newClient *Client) bool {
 	r.log.Info("player reconnected",
 		"player", newClient.Username,
 		"round", r.CurrentRound,
-		"score", ps.Score,
+		"correct_count", ps.CorrectCount,
 	)
 
 	return true
@@ -698,34 +713,38 @@ func (r *Room) GetGameStateSync(client *Client) GameStateSyncData {
 		}
 	}
 
-	var yourScore, opponentScore int
+	var yourCorrect, yourAvgMs, opponentCorrect, opponentAvgMs int
 	ps, ok := r.Players[client]
 	if ok {
-		yourScore = ps.Score
+		yourCorrect = ps.CorrectCount
+		yourAvgMs = avgReaction(ps.AllReactions)
 	}
 
 	if r.Mode == model.ModeDuel {
 		for c, p := range r.Players {
 			if c != client {
-				opponentScore = p.Score
+				opponentCorrect = p.CorrectCount
+				opponentAvgMs = avgReaction(p.AllReactions)
 				break
 			}
 		}
 	}
 
 	return GameStateSyncData{
-		RoomCode:      r.Code,
-		Mode:          string(r.Mode),
-		State:         state,
-		Round:         r.CurrentRound,
-		TotalRounds:   r.TotalRounds,
-		Question:      question,
-		Targets:       targets,
-		TimeMs:        roundTimeMs,
-		ElapsedMs:     elapsedMs,
-		YourScore:     yourScore,
-		OpponentScore: opponentScore,
-		Players:       r.getPlayerNames(),
+		RoomCode:        r.Code,
+		Mode:            string(r.Mode),
+		State:           state,
+		Round:           r.CurrentRound,
+		TotalRounds:     r.TotalRounds,
+		Question:        question,
+		Targets:         targets,
+		TimeMs:          roundTimeMs,
+		ElapsedMs:       elapsedMs,
+		YourCorrect:     yourCorrect,
+		YourAvgMs:       yourAvgMs,
+		OpponentCorrect: opponentCorrect,
+		OpponentAvgMs:   opponentAvgMs,
+		Players:         r.getPlayerNames(),
 	}
 }
 
@@ -749,17 +768,7 @@ func (r *Room) broadcastUnlocked(msg WSMessage) {
 	}
 }
 
-func calculateScore(reactionMs int) int {
-	if reactionMs <= 0 {
-		return 0
-	}
-	base := 1000
-	bonus := (roundTimeMs - reactionMs) * base / roundTimeMs
-	if bonus < 100 {
-		bonus = 100
-	}
-	return bonus
-}
+// calculateScore removed — scoring replaced by avg reaction time
 
 // generateSpreadPositions creates non-overlapping positions by dividing the
 // play area into a strict 2x3 grid. Each cell is guaranteed to have no overlap.

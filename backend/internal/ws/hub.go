@@ -799,7 +799,7 @@ func (h *Hub) SaveGameResults(room *Room, ranking []LeaderboardPlayerData) {
 
 	// Determine winner
 	var winnerID *uuid.UUID
-	if len(ranking) > 0 && ranking[0].Score > 0 {
+	if len(ranking) > 0 && ranking[0].CorrectCount > 0 {
 		for _, ps := range players {
 			if ps.Client.Username == ranking[0].Username {
 				id := ps.Client.ID
@@ -818,12 +818,12 @@ func (h *Hub) SaveGameResults(room *Room, ranking []LeaderboardPlayerData) {
 			totalCount++
 		}
 	}
-	avgReaction := 0
+	sessionAvg := 0
 	if totalCount > 0 {
-		avgReaction = totalReaction / totalCount
+		sessionAvg = totalReaction / totalCount
 	}
 
-	if err := h.gameRepo.Finish(ctx, session.ID, avgReaction, winnerID); err != nil {
+	if err := h.gameRepo.Finish(ctx, session.ID, sessionAvg, winnerID); err != nil {
 		h.log.Error("failed to finish game session", "err", err, "session_id", session.ID)
 	}
 
@@ -849,10 +849,13 @@ func (h *Hub) SaveGameResults(room *Room, ranking []LeaderboardPlayerData) {
 			playerAvgReaction = sum / len(ps.Reactions)
 		}
 
+		// Avg including penalties (for AllReactions)
+		allAvg := avgReaction(ps.AllReactions)
+
 		playerResult := &model.GameSessionPlayer{
 			SessionID:      session.ID,
 			UserID:         ps.Client.ID,
-			Score:          ps.Score,
+			Score:          ps.CorrectCount,
 			AvgReactionMs:  playerAvgReaction,
 			BestReactionMs: bestReaction,
 			Rank:           rankMap[ps.Client.Username],
@@ -861,8 +864,8 @@ func (h *Hub) SaveGameResults(room *Room, ranking []LeaderboardPlayerData) {
 				h.log.Error("failed to save player result", "err", err, "player", ps.Client.Username)
 		}
 
-		// Update user stats
-		if err := h.userRepo.UpdateStats(ctx, ps.Client.ID, int64(ps.Score), bestReaction); err != nil {
+		// Update user stats with avg reaction (including penalties) and correct count
+		if err := h.userRepo.UpdateStats(ctx, ps.Client.ID, allAvg, ps.CorrectCount, bestReaction); err != nil {
 				h.log.Error("failed to update user stats", "err", err, "player", ps.Client.Username)
 		}
 	}

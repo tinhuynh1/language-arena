@@ -11,7 +11,8 @@ type User struct {
 	Username       string    `json:"username" db:"username"`
 	Email          string    `json:"email" db:"email"`
 	PasswordHash   string    `json:"-" db:"password_hash"`
-	TotalScore     int64     `json:"total_score" db:"total_score"`
+	AvgReactionMs  int       `json:"avg_reaction_ms" db:"avg_reaction_ms"`
+	TotalCorrect   int       `json:"total_correct" db:"total_correct"`
 	GamesPlayed    int       `json:"games_played" db:"games_played"`
 	BestReactionMs int       `json:"best_reaction_ms" db:"best_reaction_ms"`
 	CreatedAt      time.Time `json:"created_at" db:"created_at"`
