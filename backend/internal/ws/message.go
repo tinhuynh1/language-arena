@@ -24,6 +24,7 @@ const (
 	MsgRoundStart      MessageType = "round_start"
 	MsgScoreUpdate     MessageType = "score_update"
 	MsgLiveLeaderboard MessageType = "live_leaderboard"
+	MsgTargetClaimed   MessageType = "target_claimed"
 	MsgRoundEnd        MessageType = "round_end"
 	MsgGameOver        MessageType = "game_over"
 	MsgOpponentLeft    MessageType = "opponent_left"
@@ -79,6 +80,11 @@ type JoinRoomData struct {
 type TargetHitData struct {
 	TargetID   string `json:"target_id"`
 	ReactionMs int    `json:"reaction_ms"`
+}
+
+type TargetClaimedData struct {
+	TargetID  string `json:"target_id"`
+	ClaimedBy string `json:"claimed_by"`
 }
 
 type MatchFoundData struct {

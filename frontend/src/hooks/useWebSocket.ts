@@ -6,7 +6,7 @@ import { getWsUrl } from '@/lib/api';
 export type WSMessageType =
   | 'join_queue' | 'create_room' | 'join_room' | 'start_game' | 'ready' | 'target_hit' | 'leave_room'
   | 'queue_joined' | 'match_found' | 'room_created' | 'player_joined' | 'player_left'
-  | 'countdown' | 'round_start' | 'score_update' | 'live_leaderboard'
+  | 'countdown' | 'round_start' | 'score_update' | 'live_leaderboard' | 'target_claimed'
   | 'round_end' | 'game_over' | 'opponent_left' | 'host_changed' | 'game_state_sync' | 'error';
 
 export interface WSMessage {
@@ -99,6 +99,11 @@ export interface PlayerJoinedData {
 
 export interface HostChangedData {
   new_host: string;
+}
+
+export interface TargetClaimedData {
+  target_id: string;
+  claimed_by: string;
 }
 
 export interface GameStateSyncData {

@@ -58,6 +58,7 @@ type Room struct {
 	Hub      *Hub
 
 	Players map[*Client]*PlayerState
+	ClaimedTargets map[string]string // targetID → username who claimed it (Duel/Battle only)
 
 	CurrentRound int
 	TotalRounds  int
@@ -217,10 +218,11 @@ func (r *Room) nextRound() {
 
 	r.State = StatePlaying
 
-	// Reset answered state for all players
+	// Reset answered state and claimed targets for all players
 	for _, ps := range r.Players {
 		ps.Answered = false
 	}
+	r.ClaimedTargets = make(map[string]string)
 
 	vocabIdx := (r.CurrentRound - 1) % len(r.Vocabs)
 	correctVocab := r.Vocabs[vocabIdx]
@@ -358,6 +360,29 @@ func (r *Room) HandleHit(client *Client, data TargetHitData) {
 	ps, ok := r.Players[client]
 	if !ok || ps.Answered {
 		return
+	}
+
+	// In Duel/Battle: check if this target was already claimed by another player
+	if r.Mode != model.ModeSolo {
+		if claimedBy, claimed := r.ClaimedTargets[data.TargetID]; claimed {
+			r.log.Debug("target already claimed",
+				"player", client.Username,
+				"target", data.TargetID,
+				"claimed_by", claimedBy,
+			)
+			return
+		}
+		// Claim this target
+		r.ClaimedTargets[data.TargetID] = client.Username
+
+		// Broadcast target_claimed to ALL players so it disappears
+		go r.broadcast(WSMessage{
+			Type: MsgTargetClaimed,
+			Data: TargetClaimedData{
+				TargetID:  data.TargetID,
+				ClaimedBy: client.Username,
+			},
+		})
 	}
 
 	vocabIdx := (r.CurrentRound - 1) % len(r.Vocabs)

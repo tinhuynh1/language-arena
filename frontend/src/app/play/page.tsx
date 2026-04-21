@@ -566,7 +566,8 @@ export default function PlayPage() {
           mode={game.mode}
           lastReactionMs={game.lastReactionMs}
           lastIsCorrect={game.lastIsCorrect}
-          onHit={game.hitTarget}
+          onHit={(target, _ms) => game.hitTarget(target.id)}
+          claimedTargets={game.claimedTargets}
         />
         {game.mode === 'battle' && (
           <LiveLeaderboard players={game.liveLeaderboard} round={game.round} />
