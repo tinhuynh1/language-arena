@@ -78,7 +78,7 @@ export default function LoginPage() {
         </div>
 
         {/* Form card */}
-        <form onSubmit={handleSubmit} className="card space-y-5" noValidate>
+        <form onSubmit={handleSubmit} className="card space-y-5">
           {isRegister && (
             <div>
               <label htmlFor="username" className="block text-xs font-heading uppercase tracking-wider text-[var(--color-text-muted)] mb-2">
