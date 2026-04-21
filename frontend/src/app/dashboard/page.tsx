@@ -92,9 +92,9 @@ export default function DashboardPage() {
             {/* Stats grid */}
             <div className="grid grid-cols-3 gap-4 mb-6 animate-fade-in-up delay-200">
               <StatCard
-                value={user.total_score.toLocaleString()}
-                label="Total Score"
-                color="#00ff88"
+                value={user.avg_reaction_ms > 0 ? `${user.avg_reaction_ms}ms` : '—'}
+                label="Avg Reaction"
+                color={reactionColor(user.avg_reaction_ms)}
               />
               <StatCard
                 value={String(user.games_played)}

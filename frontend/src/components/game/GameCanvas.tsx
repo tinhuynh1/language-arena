@@ -10,11 +10,12 @@ interface GameCanvasProps {
   round: number;
   totalRounds: number;
   timeMs: number;
-  myScore: number;
-  opponentScore: number;
+  myCorrect: number;
+  opponentCorrect: number;
   opponent: string;
   mode: 'solo' | 'duel' | 'battle';
   lastReactionMs: number;
+  lastIsCorrect: boolean;
   onHit: (targetId: string) => number;
 }
 
@@ -83,11 +84,12 @@ export default function GameCanvas({
   round,
   totalRounds,
   timeMs,
-  myScore,
-  opponentScore,
+  myCorrect,
+  opponentCorrect,
   opponent,
   mode,
   lastReactionMs,
+  lastIsCorrect,
   onHit,
 }: GameCanvasProps) {
   const [hitTargets, setHitTargets] = useState<Set<string>>(new Set());
@@ -132,12 +134,12 @@ export default function GameCanvas({
     setShowPopup({
       x: rect.left + rect.width / 2,
       y: rect.top,
-      text: target.correct ? `+${Math.max(100, Math.round((timeMs - reactionMs) * 1000 / timeMs))}` : '-50',
+      text: target.correct ? '✓' : '✗',
       correct: target.correct,
     });
 
     setTimeout(() => setShowPopup(null), 800);
-  }, [hitTargets, onHit, timeMs, isTimeUp]);
+  }, [hitTargets, onHit, isTimeUp]);
 
   const timePercent = (timeLeft / timeMs) * 100;
   const timeColor = timePercent > 50 ? '#00ff88' : timePercent > 25 ? '#ffd700' : '#ff3548';
@@ -198,7 +200,7 @@ export default function GameCanvas({
             <CrosshairIcon size={18} color="#00ff88" />
             <div>
               <div className="text-[10px] sm:text-xs text-[var(--color-text-muted)] font-heading uppercase tracking-widest leading-none">You</div>
-              <div className="text-2xl sm:text-4xl font-heading font-bold text-glow leading-none mt-0.5" style={{ color: '#00ff88' }}>{myScore}</div>
+              <div className="text-2xl sm:text-4xl font-heading font-bold text-glow leading-none mt-0.5" style={{ color: '#00ff88' }}>{myCorrect}<span className="text-base sm:text-xl text-[var(--color-text-muted)]" >/{totalRounds}</span></div>
             </div>
           </div>
 
@@ -244,7 +246,7 @@ export default function GameCanvas({
             }}>
               <div className="text-right">
                 <div className="text-[10px] sm:text-xs text-[var(--color-text-muted)] font-heading uppercase tracking-widest leading-none">{opponent}</div>
-                <div className="text-2xl sm:text-4xl font-heading font-bold leading-none mt-0.5" style={{ color: '#ff6b35', textShadow: '0 0 12px rgba(255,107,53,0.4)' }}>{opponentScore}</div>
+                <div className="text-2xl sm:text-4xl font-heading font-bold leading-none mt-0.5" style={{ color: '#ff6b35', textShadow: '0 0 12px rgba(255,107,53,0.4)' }}>{opponentCorrect}<span className="text-base sm:text-xl text-[var(--color-text-muted)]" >/{totalRounds}</span></div>
               </div>
               <CrosshairIcon size={18} color="#ff6b35" />
             </div>

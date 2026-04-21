@@ -38,18 +38,20 @@ type RoundEndData struct {
 }
 
 type GameStateSyncData struct {
-	RoomCode      string   `json:"room_code"`
-	Mode          string   `json:"mode"`
-	State         string   `json:"state"`
-	Round         int      `json:"round"`
-	TotalRounds   int      `json:"total_rounds"`
-	Question      string   `json:"question"`
-	Targets       []Target `json:"targets"`
-	TimeMs        int      `json:"time_ms"`
-	ElapsedMs     int      `json:"elapsed_ms"`
-	YourScore     int      `json:"your_score"`
-	OpponentScore int      `json:"opponent_score"`
-	Players       []string `json:"players"`
+	RoomCode         string   `json:"room_code"`
+	Mode             string   `json:"mode"`
+	State            string   `json:"state"`
+	Round            int      `json:"round"`
+	TotalRounds      int      `json:"total_rounds"`
+	Question         string   `json:"question"`
+	Targets          []Target `json:"targets"`
+	TimeMs           int      `json:"time_ms"`
+	ElapsedMs        int      `json:"elapsed_ms"`
+	YourCorrect      int      `json:"your_correct"`
+	YourAvgMs        int      `json:"your_avg_ms"`
+	OpponentCorrect  int      `json:"opponent_correct"`
+	OpponentAvgMs    int      `json:"opponent_avg_ms"`
+	Players          []string `json:"players"`
 }
 
 type WSMessage struct {
@@ -125,16 +127,20 @@ type RoundStartData struct {
 }
 
 type ScoreUpdateData struct {
-	You        int    `json:"you"`
-	Opponent   int    `json:"opponent"`
-	LastHitBy  string `json:"last_hit_by,omitempty"`
-	ReactionMs int    `json:"reaction_ms,omitempty"`
+	YourCorrect     int    `json:"your_correct"`
+	YourAvgMs       int    `json:"your_avg_ms"`
+	OpponentCorrect int    `json:"opponent_correct,omitempty"`
+	OpponentAvgMs   int    `json:"opponent_avg_ms,omitempty"`
+	LastHitBy       string `json:"last_hit_by,omitempty"`
+	ReactionMs      int    `json:"reaction_ms,omitempty"`
+	IsCorrect       bool   `json:"is_correct"`
 }
 
 type LeaderboardPlayerData struct {
-	Rank     int    `json:"rank"`
-	Username string `json:"username"`
-	Score    int    `json:"score"`
+	Rank           int    `json:"rank"`
+	Username       string `json:"username"`
+	CorrectCount   int    `json:"correct_count"`
+	AvgReactionMs  int    `json:"avg_reaction_ms"`
 }
 
 type LiveLeaderboardData struct {
@@ -143,11 +149,13 @@ type LiveLeaderboardData struct {
 }
 
 type GameOverData struct {
-	Winner        string          `json:"winner"`
-	YourScore     int             `json:"your_score"`
-	OpponentScore int             `json:"opponent_score"`
-	Stats         GameOverStats   `json:"stats"`
-	Ranking       []LeaderboardPlayerData `json:"ranking,omitempty"`
+	Winner          string                  `json:"winner"`
+	YourCorrect     int                     `json:"your_correct"`
+	YourAvgMs       int                     `json:"your_avg_ms"`
+	OpponentCorrect int                     `json:"opponent_correct"`
+	OpponentAvgMs   int                     `json:"opponent_avg_ms"`
+	Stats           GameOverStats           `json:"stats"`
+	Ranking         []LeaderboardPlayerData `json:"ranking,omitempty"`
 }
 
 type GameOverStats struct {

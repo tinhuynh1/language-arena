@@ -39,16 +39,20 @@ export interface RoundStartData {
 }
 
 export interface ScoreUpdateData {
-  you: number;
-  opponent: number;
+  your_correct: number;
+  your_avg_ms: number;
+  opponent_correct?: number;
+  opponent_avg_ms?: number;
   last_hit_by?: string;
   reaction_ms?: number;
+  is_correct?: boolean;
 }
 
 export interface LeaderboardPlayer {
   rank: number;
   username: string;
-  score: number;
+  correct_count: number;
+  avg_reaction_ms: number;
 }
 
 export interface LiveLeaderboardData {
@@ -58,8 +62,10 @@ export interface LiveLeaderboardData {
 
 export interface GameOverData {
   winner: string;
-  your_score: number;
-  opponent_score: number;
+  your_correct: number;
+  your_avg_ms: number;
+  opponent_correct: number;
+  opponent_avg_ms: number;
   stats: {
     total_rounds: number;
     avg_reaction_ms: number;
@@ -105,8 +111,10 @@ export interface GameStateSyncData {
   targets: Target[];
   time_ms: number;
   elapsed_ms: number;
-  your_score: number;
-  opponent_score: number;
+  your_correct: number;
+  your_avg_ms: number;
+  opponent_correct: number;
+  opponent_avg_ms: number;
   players: string[];
 }
 

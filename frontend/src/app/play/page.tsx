@@ -560,11 +560,12 @@ export default function PlayPage() {
           round={game.round}
           totalRounds={game.totalRounds}
           timeMs={game.timeMs}
-          myScore={game.myScore}
-          opponentScore={game.opponentScore}
+          myCorrect={game.myCorrect}
+          opponentCorrect={game.opponentCorrect}
           opponent={game.opponent}
           mode={game.mode}
           lastReactionMs={game.lastReactionMs}
+          lastIsCorrect={game.lastIsCorrect}
           onHit={game.hitTarget}
         />
         {game.mode === 'battle' && (

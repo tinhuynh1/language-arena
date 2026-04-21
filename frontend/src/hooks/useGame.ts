@@ -35,11 +35,14 @@ interface GameStore {
   totalRounds: number;
   question: string;
   targets: Target[];
-  myScore: number;
-  opponentScore: number;
+  myCorrect: number;
+  myAvgMs: number;
+  opponentCorrect: number;
+  opponentAvgMs: number;
   timeMs: number;
   countdownMs: number;
   lastReactionMs: number;
+  lastIsCorrect: boolean;
   gameOverData: GameOverData | null;
   liveLeaderboard: LeaderboardPlayer[];
   errorMessage: string;
@@ -62,11 +65,14 @@ const initialStore: GameStore = {
   totalRounds: 10,
   question: '',
   targets: [],
-  myScore: 0,
-  opponentScore: 0,
+  myCorrect: 0,
+  myAvgMs: 0,
+  opponentCorrect: 0,
+  opponentAvgMs: 0,
   timeMs: 5000,
   countdownMs: 0,
   lastReactionMs: 0,
+  lastIsCorrect: false,
   gameOverData: null,
   liveLeaderboard: [],
   errorMessage: '',
@@ -158,9 +164,12 @@ export function useGame() {
         case 'score_update': {
           const data = msg.data as ScoreUpdateData;
           updateStore({
-            myScore: data.you,
-            opponentScore: data.opponent,
+            myCorrect: data.your_correct,
+            myAvgMs: data.your_avg_ms,
+            opponentCorrect: data.opponent_correct || 0,
+            opponentAvgMs: data.opponent_avg_ms || 0,
             lastReactionMs: data.reaction_ms || 0,
+            lastIsCorrect: data.is_correct || false,
           });
           break;
         }
@@ -172,7 +181,6 @@ export function useGame() {
         }
 
         case 'round_end': {
-          const data = msg.data as { result: string; next_in_ms: number };
           updateStore({ state: 'round_end' });
           break;
         }
@@ -214,8 +222,10 @@ export function useGame() {
             question: data.question,
             targets: data.targets,
             timeMs: data.time_ms,
-            myScore: data.your_score,
-            opponentScore: data.opponent_score,
+            myCorrect: data.your_correct,
+            myAvgMs: data.your_avg_ms,
+            opponentCorrect: data.opponent_correct,
+            opponentAvgMs: data.opponent_avg_ms,
             players: data.players,
             playerCount: data.players?.length || 0,
           });
@@ -226,7 +236,6 @@ export function useGame() {
         case 'error': {
           const errorStr = typeof msg.data === 'string' ? msg.data : 'Unknown error';
           console.error('[Game] Error:', errorStr);
-          // Reset to idle so the user can try again
           updateStore({ state: 'idle', errorMessage: errorStr });
           break;
         }
