@@ -12,6 +12,20 @@ services:
     networks:
       - lingo-net
 
+  migrate:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - DB_URL=${DB_URL:-postgres://lingouser:lingopass@postgres:5432/lingodb?sslmode=disable}
+    networks:
+      - lingo-net
+    restart: on-failure
+
   backend:
     build:
       context: ./backend
@@ -19,6 +33,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_started
     environment:

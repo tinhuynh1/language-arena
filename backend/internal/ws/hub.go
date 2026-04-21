@@ -288,7 +288,7 @@ func (h *Hub) handleJoinQueue(client *Client, msg WSMessage) {
 		return
 	}
 
-	h.Matchmaker.Enqueue(client, data.Language, data.Level, model.QuizType(data.QuizType))
+	h.Matchmaker.Enqueue(client, data.Language, data.Level, model.QuizType(data.QuizType), model.GameMode(data.Mode))
 }
 
 func (h *Hub) handleCreateRoom(client *Client, msg WSMessage) {
