@@ -29,6 +29,7 @@ spec:
           args:
             - "--structured-logs"
             - "--auto-iam-authn"
+            - "--address=0.0.0.0"
             - "lingo-sniper-prod:us-central1:lingo-sniper-db"
           securityContext:
             runAsNonRoot: true
@@ -39,12 +40,12 @@ spec:
             limits:
               cpu: "200m"
               memory: "128Mi"
-          startupProbe:
+          readinessProbe:
             tcpSocket:
               port: 5432
             initialDelaySeconds: 5
             periodSeconds: 5
-            failureThreshold: 24
+            failureThreshold: 6
       containers:
         # ── Go Backend ──
         - name: backend
