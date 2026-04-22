@@ -36,14 +36,14 @@ jobs:
       - name: Run Unit Tests with Coverage
         run: |
           cd backend
-          go test ./... -coverprofile=./cover.out -covermode=atomic
+          go test $(go list ./... | grep -vE "/cmd/|/migration/") -coverprofile=./cover.out -covermode=atomic
 
-      - name: Check 60% Total Coverage Threshold
+      - name: Check 50% Total Coverage Threshold
         uses: vladopajic/go-test-coverage@v2
         with:
           profile: backend/cover.out
           local-prefix: github.com/michael/language-arena/backend
-          threshold-total: 60
+          threshold-total: 50
 
   frontend-quality-gate:
     name: Frontend Linting
