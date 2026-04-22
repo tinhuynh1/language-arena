@@ -39,7 +39,7 @@ func (h *LeaderboardHandler) GetLeaderboard(c *gin.Context) {
 	entries, total, err := h.leaderboardService.GetTopPlayers(c.Request.Context(), limit, page)
 	if err != nil {
 		h.log.Error("get leaderboard failed", "limit", limit, "page", page, "err", err, "request_id", middleware.RequestIDFromContext(c.Request.Context()))
-		response.InternalError(c, "failed to fetch leaderboard")
+		response.InternalErrorI18n(c, "err.leaderboard.fetch_failed")
 		return
 	}
 
@@ -54,7 +54,7 @@ func (h *LeaderboardHandler) GetLeaderboard(c *gin.Context) {
 func (h *LeaderboardHandler) GetMyStats(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
-		response.Unauthorized(c, "not authenticated")
+		response.UnauthorizedI18n(c, "err.auth.not_authenticated")
 		return
 	}
 
@@ -62,7 +62,7 @@ func (h *LeaderboardHandler) GetMyStats(c *gin.Context) {
 	user, games, err := h.leaderboardService.GetPlayerStats(c.Request.Context(), uid)
 	if err != nil {
 		h.log.Error("get player stats failed", "user_id", uid, "err", err, "request_id", middleware.RequestIDFromContext(c.Request.Context()))
-		response.InternalError(c, "failed to fetch stats")
+		response.InternalErrorI18n(c, "err.leaderboard.stats_failed")
 		return
 	}
 

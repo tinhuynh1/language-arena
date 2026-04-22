@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { api, type User } from '@/lib/api';
+import { useLocale } from '@/i18n/LocaleProvider';
 
 function reactionColor(ms: number) {
   if (ms <= 0) return '#00d4ff';
@@ -24,6 +25,7 @@ function StatCard({ value, label, color }: { value: string; label: string; color
 
 export default function DashboardPage() {
   const { user: authUser } = useAuth();
+  const { t } = useLocale();
   const router = useRouter();
   const [stats, setStats] = useState<{ user: User; recent_games: unknown[] } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -53,9 +55,9 @@ export default function DashboardPage() {
 
       <div className="relative z-10 max-w-2xl mx-auto">
         <div className="mb-10 animate-fade-in-up">
-          <div className="badge mb-4">Profile</div>
+          <div className="badge mb-4">{t('dashboard.badge')}</div>
           <h1 className="font-heading font-bold text-4xl sm:text-5xl uppercase tracking-wider">
-            Dashboard
+            {t('dashboard.title')}
           </h1>
         </div>
 
@@ -93,17 +95,17 @@ export default function DashboardPage() {
             <div className="grid grid-cols-3 gap-4 mb-6 animate-fade-in-up delay-200">
               <StatCard
                 value={user.avg_reaction_ms > 0 ? `${user.avg_reaction_ms}ms` : '—'}
-                label="Avg Reaction"
+                label={t('dashboard.avgReaction')}
                 color={reactionColor(user.avg_reaction_ms)}
               />
               <StatCard
                 value={String(user.games_played)}
-                label="Games Played"
+                label={t('dashboard.gamesPlayed')}
                 color="#ff6b35"
               />
               <StatCard
                 value={user.best_reaction_ms > 0 ? `${user.best_reaction_ms}ms` : '—'}
-                label="Best Reaction"
+                label={t('dashboard.bestReaction')}
                 color={reactionColor(user.best_reaction_ms)}
               />
             </div>
@@ -111,10 +113,10 @@ export default function DashboardPage() {
             {/* Actions */}
             <div className="flex gap-4 animate-fade-in-up delay-300">
               <Link href="/play" className="btn-primary flex-1 text-center">
-                Play Now
+                {t('dashboard.playNow')}
               </Link>
               <Link href="/leaderboard" className="btn-secondary flex-1 text-center">
-                Leaderboard
+                {t('dashboard.leaderboard')}
               </Link>
             </div>
           </>

@@ -26,7 +26,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 	var req model.RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.log.Warn("register: invalid request body", "err", err, "request_id", middleware.RequestIDFromContext(c.Request.Context()))
-		response.BadRequest(c, "invalid request: "+err.Error())
+		response.BadRequestI18n(c, "err.auth.invalid_request")
 		return
 	}
 
@@ -36,13 +36,13 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		switch err {
 		case service.ErrUserExists:
 			h.log.Info("register: email already exists", "email", req.Email, "request_id", reqID)
-			response.BadRequest(c, err.Error())
+			response.BadRequestI18n(c, "err.auth.email_exists")
 		case service.ErrUsernameExists:
 			h.log.Info("register: username already taken", "username", req.Username, "request_id", reqID)
-			response.BadRequest(c, err.Error())
+			response.BadRequestI18n(c, "err.auth.username_exists")
 		default:
 			h.log.Error("register: internal error", "email", req.Email, "err", err, "request_id", reqID)
-			response.InternalError(c, "registration failed")
+			response.InternalErrorI18n(c, "err.auth.registration_failed")
 		}
 		return
 	}
@@ -54,7 +54,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	var req model.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		h.log.Warn("login: invalid request body", "err", err, "request_id", middleware.RequestIDFromContext(c.Request.Context()))
-		response.BadRequest(c, "invalid request: "+err.Error())
+		response.BadRequestI18n(c, "err.auth.invalid_request")
 		return
 	}
 
@@ -63,11 +63,11 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		reqID := middleware.RequestIDFromContext(c.Request.Context())
 		if err == service.ErrInvalidCredentials {
 			h.log.Info("login: invalid credentials", "email", req.Email, "request_id", reqID)
-			response.Unauthorized(c, err.Error())
+			response.UnauthorizedI18n(c, "err.auth.invalid_credentials")
 			return
 		}
 		h.log.Error("login: internal error", "email", req.Email, "err", err, "request_id", reqID)
-		response.InternalError(c, "login failed")
+		response.InternalErrorI18n(c, "err.auth.login_failed")
 		return
 	}
 

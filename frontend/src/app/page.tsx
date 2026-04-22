@@ -4,45 +4,53 @@ import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-
-const MODES = [
-  {
-    id: 'solo',
-    label: 'Solo',
-    color: '#00ff88',
-    desc: 'Train alone at your own pace. Perfect for building vocabulary and improving reaction time.',
-    icon: '◎',
-  },
-  {
-    id: 'duel',
-    label: '1v1 Duel',
-    color: '#ff6b35',
-    desc: 'Face another player in real-time. Same targets, same clock — fastest and most accurate wins.',
-    icon: '⊕',
-  },
-  {
-    id: 'battle',
-    label: 'Battle Royale',
-    color: '#00d4ff',
-    desc: 'Up to 8 players compete simultaneously. Climb the live leaderboard round by round.',
-    icon: '⊞',
-  },
-];
-
-const QUIZ_TYPES = [
-  { label: 'Meaning → Word', desc: 'See the definition, click the right word.' },
-  { label: 'Word → Meaning', desc: 'See the word, pick the correct definition.' },
-  { label: 'Word → IPA', desc: 'English pronunciation training with IPA.' },
-  { label: 'Word → Pinyin', desc: 'Chinese pronunciation with Pinyin romanization.' },
-];
+import { useLocale } from '@/i18n/LocaleProvider';
 
 export default function HomePage() {
   const { user } = useAuth();
+  const { t } = useLocale();
   const [onlineCount, setOnlineCount] = useState(0);
 
   useEffect(() => {
     api.online().then(d => setOnlineCount(d.online)).catch(() => {});
   }, []);
+
+  const MODES = [
+    {
+      id: 'solo',
+      label: t('home.mode.solo.label'),
+      color: '#00ff88',
+      desc: t('home.mode.solo.desc'),
+      icon: '◎',
+    },
+    {
+      id: 'duel',
+      label: t('home.mode.duel.label'),
+      color: '#ff6b35',
+      desc: t('home.mode.duel.desc'),
+      icon: '⊕',
+    },
+    {
+      id: 'battle',
+      label: t('home.mode.battle.label'),
+      color: '#00d4ff',
+      desc: t('home.mode.battle.desc'),
+      icon: '⊞',
+    },
+  ];
+
+  const QUIZ_TYPES = [
+    { label: t('home.quiz.meaningToWord.label'), desc: t('home.quiz.meaningToWord.desc') },
+    { label: t('home.quiz.wordToMeaning.label'), desc: t('home.quiz.wordToMeaning.desc') },
+    { label: t('home.quiz.wordToIpa.label'), desc: t('home.quiz.wordToIpa.desc') },
+    { label: t('home.quiz.wordToPinyin.label'), desc: t('home.quiz.wordToPinyin.desc') },
+  ];
+
+  const HOW_STEPS = [
+    { num: '01', color: '#00ff88', title: t('home.how.step1.title'), desc: t('home.how.step1.desc') },
+    { num: '02', color: '#ff6b35', title: t('home.how.step2.title'), desc: t('home.how.step2.desc') },
+    { num: '03', color: '#00d4ff', title: t('home.how.step3.title'), desc: t('home.how.step3.desc') },
+  ];
 
   return (
     <div className="relative overflow-hidden">
@@ -67,7 +75,7 @@ export default function HomePage() {
           {/* Live badge */}
           <div className="inline-flex items-center gap-2 mb-8 badge" aria-label={`${onlineCount} players online`}>
             <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent-neon)] animate-pulse" aria-hidden="true" />
-            {onlineCount > 0 ? `${onlineCount} players online` : 'Ready to play'}
+            {onlineCount > 0 ? t('home.badge.online', { count: onlineCount }) : t('home.badge.ready')}
           </div>
 
           {/* Headline */}
@@ -77,23 +85,22 @@ export default function HomePage() {
           </h1>
 
           <p className="text-base sm:text-lg text-[var(--color-text-secondary)] max-w-2xl mx-auto mb-12 leading-relaxed animate-fade-in-up delay-200">
-            Master vocabulary through reflex-driven gameplay.
-            Read the cue, target the answer, beat your opponent — all in under a second.
+            {t('home.subtitle')}
           </p>
 
           {/* CTA row */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-in-up delay-300">
             <Link href={user ? '/play' : '/login'} className="btn-primary text-base px-10 py-4">
-              {user ? 'Enter Arena' : 'Start Playing Free'}
+              {user ? t('home.cta.play') : t('home.cta.start')}
             </Link>
             <Link href="/leaderboard" className="btn-secondary text-base px-10 py-4">
-              Leaderboard
+              {t('home.cta.leaderboard')}
             </Link>
           </div>
 
           {/* Mini stats row */}
           <div className="flex items-center justify-center gap-8 mt-14 animate-fade-in-up delay-400">
-            {[['380+', 'Words'], ['2', 'Languages'], ['4', 'Quiz Modes']].map(([val, label]) => (
+            {[['380+', t('home.stat.words')], ['2', t('home.stat.languages')], ['4', t('home.stat.quizModes')]].map(([val, label]) => (
               <div key={label} className="text-center">
                 <div className="text-2xl font-heading font-bold stat-shimmer">{val}</div>
                 <div className="text-[10px] font-heading uppercase tracking-widest text-[var(--color-text-muted)] mt-0.5">{label}</div>
@@ -112,9 +119,9 @@ export default function HomePage() {
       <section className="py-24 px-6 border-t border-[var(--color-border-default)]" aria-labelledby="modes-heading">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16">
-            <div className="badge mb-4">Game Modes</div>
+            <div className="badge mb-4">{t('home.modes.badge')}</div>
             <h2 id="modes-heading" className="font-heading font-bold text-3xl sm:text-4xl uppercase tracking-wider">
-              Pick Your <span className="text-gradient-neon">Battle</span>
+              {t('home.modes.title').replace('{accent}', '')} <span className="text-gradient-neon">{t('home.modes.titleAccent')}</span>
             </h2>
           </div>
 
@@ -139,18 +146,14 @@ export default function HomePage() {
       <section className="py-24 px-6 border-t border-[var(--color-border-default)]" aria-labelledby="how-heading">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16">
-            <div className="badge mb-4">Gameplay</div>
+            <div className="badge mb-4">{t('home.how.badge')}</div>
             <h2 id="how-heading" className="font-heading font-bold text-3xl sm:text-4xl uppercase tracking-wider">
-              How It <span className="text-gradient-neon">Works</span>
+              {t('home.how.title').replace('{accent}', '')} <span className="text-gradient-neon">{t('home.how.titleAccent')}</span>
             </h2>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
-            {[
-              { num: '01', color: '#00ff88', title: 'Choose Your Setup', desc: 'Select language (English or Chinese), difficulty level, and quiz type. Your opponent is matched automatically.' },
-              { num: '02', color: '#ff6b35', title: 'Aim & Fire', desc: 'Word targets appear across the canvas. Read the prompt and click the correct target before time expires.' },
-              { num: '03', color: '#00d4ff', title: 'Score & Climb', desc: 'Faster, more accurate answers earn more points. Track your best reaction time and climb the global rankings.' },
-            ].map(({ num, color, title, desc }) => (
+            {HOW_STEPS.map(({ num, color, title, desc }) => (
               <div key={num} className="card group">
                 <div className="w-11 h-11 flex items-center justify-center border font-heading font-bold text-base mb-5 transition-all duration-200 group-hover:scale-110"
                      style={{ borderColor: color, color, borderRadius: '2px' }}>
@@ -168,12 +171,12 @@ export default function HomePage() {
       <section className="py-24 px-6 border-t border-[var(--color-border-default)]" aria-labelledby="quiz-heading">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-16">
-            <div className="badge mb-4">Quiz Types</div>
+            <div className="badge mb-4">{t('home.quiz.badge')}</div>
             <h2 id="quiz-heading" className="font-heading font-bold text-3xl sm:text-4xl uppercase tracking-wider">
-              4 Ways to <span className="text-gradient-neon">Train</span>
+              {t('home.quiz.title').replace('{accent}', '')} <span className="text-gradient-neon">{t('home.quiz.titleAccent')}</span>
             </h2>
             <p className="text-sm text-[var(--color-text-muted)] mt-4 max-w-xl mx-auto">
-              Each quiz type challenges a different aspect of vocabulary mastery. Rotate between them for complete fluency.
+              {t('home.quiz.subtitle')}
             </p>
           </div>
 
@@ -198,13 +201,13 @@ export default function HomePage() {
       <section className="py-24 px-6 border-t border-[var(--color-border-default)]">
         <div className="max-w-2xl mx-auto text-center">
           <h2 className="font-heading font-bold text-3xl sm:text-5xl uppercase tracking-wider mb-6">
-            Ready to <span className="text-gradient-neon">Snipe</span>?
+            {t('home.cta2.title').replace('{accent}', '')} <span className="text-gradient-neon">{t('home.cta2.titleAccent')}</span>?
           </h2>
           <p className="text-[var(--color-text-secondary)] mb-10 leading-relaxed">
-            Free to play. No downloads. Compete in real-time from your browser.
+            {t('home.cta2.subtitle')}
           </p>
           <Link href={user ? '/play' : '/login'} className="btn-primary text-base px-12 py-4">
-            {user ? 'Play Now' : 'Create Free Account'}
+            {user ? t('home.cta2.play') : t('home.cta2.start')}
           </Link>
         </div>
       </section>
@@ -216,11 +219,11 @@ export default function HomePage() {
             <span className="text-[var(--color-accent-neon)]">LINGO</span> SNIPER
           </div>
           <p className="text-xs text-[var(--color-text-muted)] font-heading">
-            Built with Go · Next.js · WebSocket · PostgreSQL
+            {t('home.footer.builtWith')}
           </p>
           <div className="flex items-center gap-4 text-xs font-heading uppercase tracking-wider text-[var(--color-text-muted)]">
-            <Link href="/play" className="hover:text-[var(--color-accent-neon)] transition-colors">Play</Link>
-            <Link href="/leaderboard" className="hover:text-[var(--color-accent-neon)] transition-colors">Ranks</Link>
+            <Link href="/play" className="hover:text-[var(--color-accent-neon)] transition-colors">{t('home.footer.play')}</Link>
+            <Link href="/leaderboard" className="hover:text-[var(--color-accent-neon)] transition-colors">{t('home.footer.ranks')}</Link>
           </div>
         </div>
       </footer>

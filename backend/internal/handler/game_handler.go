@@ -62,14 +62,14 @@ func (h *GameHandler) HandleWebSocket(c *gin.Context) {
 	userID, err := h.authSvc.ValidateToken(token)
 	if err != nil {
 		h.log.Warn("ws: invalid token", "err", err, "ip", c.ClientIP(), "request_id", middleware.RequestIDFromContext(c.Request.Context()))
-		response.Unauthorized(c, "invalid token")
+		response.UnauthorizedI18n(c, "err.game.invalid_token")
 		return
 	}
 
 	user, err := h.userRepo.FindByID(c.Request.Context(), userID)
 	if err != nil {
 		h.log.Error("ws: user not found", "user_id", userID, "err", err, "request_id", middleware.RequestIDFromContext(c.Request.Context()))
-		response.NotFound(c, "user not found")
+		response.NotFoundI18n(c, "err.game.user_not_found")
 		return
 	}
 
@@ -95,7 +95,7 @@ func (h *GameHandler) GetOnlineCount(c *gin.Context) {
 func (h *GameHandler) GetGameHistory(c *gin.Context) {
 	userID, exists := c.Get("user_id")
 	if !exists {
-		response.Unauthorized(c, "not authenticated")
+		response.UnauthorizedI18n(c, "err.auth.not_authenticated")
 		return
 	}
 
@@ -103,7 +103,7 @@ func (h *GameHandler) GetGameHistory(c *gin.Context) {
 	games, err := h.gameRepo.FindByUserID(c.Request.Context(), uid, 20)
 	if err != nil {
 		h.log.Error("get game history failed", "user_id", uid, "err", err, "request_id", middleware.RequestIDFromContext(c.Request.Context()))
-		response.InternalError(c, "failed to fetch game history")
+		response.InternalErrorI18n(c, "err.game.history_failed")
 		return
 	}
 
