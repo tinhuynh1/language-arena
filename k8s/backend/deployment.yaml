@@ -42,8 +42,9 @@ spec:
           readinessProbe:
             tcpSocket:
               port: 5432
-            initialDelaySeconds: 2
+            initialDelaySeconds: 10
             periodSeconds: 5
+            failureThreshold: 12
       containers:
         # ── Go Backend ──
         - name: backend
