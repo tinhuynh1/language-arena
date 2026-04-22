@@ -91,6 +91,23 @@ func TestGetLeaderboard_InternalError(t *testing.T) {
 	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }
 
+func TestGetLeaderboard_DefaultLimits(t *testing.T) {
+	entries := []model.LeaderboardEntry{}
+	userReader := &mockLBUserStatsReader{
+		getLeaderboardFn: func(_ context.Context, limit int, page int) ([]model.LeaderboardEntry, int, error) {
+			return entries, 0, nil
+		},
+	}
+	svc := service.NewLeaderboardService(userReader, nil)
+	h := NewLeaderboardHandler(svc)
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	// Invalid limit and page should default to 10 and 1
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/v1/leaderboard?limit=abc&page=-1", nil)
+	h.GetLeaderboard(c)
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
 // ── GetMyStats Tests ───────────────────────────────────
 
 func TestGetMyStats_Success(t *testing.T) {
@@ -132,4 +149,24 @@ func TestGetMyStats_Unauthenticated(t *testing.T) {
 	h.GetMyStats(c)
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
+}
+
+func TestGetMyStats_InternalError(t *testing.T) {
+	userID := uuid.New()
+	
+	userReader := &mockLBUserStatsReader{
+		findByIDFn: func(_ context.Context, _ uuid.UUID) (*model.User, error) { return nil, errors.New("db error") },
+	}
+
+	svc := service.NewLeaderboardService(userReader, nil)
+	h := NewLeaderboardHandler(svc)
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodGet, "/api/v1/stats/me", nil)
+	c.Set("user_id", userID)
+
+	h.GetMyStats(c)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
 }

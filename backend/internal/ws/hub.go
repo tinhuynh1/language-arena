@@ -748,6 +748,14 @@ func (h *Hub) RemoveRoom(room *Room) {
 }
 
 func (h *Hub) GetVocabs(language, level string, count int) []model.Vocabulary {
+	if h.vocabService == nil {
+		h.log.Warn("vocabService is nil, using fallback", "language", language, "level", level)
+		return []model.Vocabulary{
+			{Word: "hello", Meaning: "xin chào", Language: "en", Level: "A1"},
+			{Word: "world", Meaning: "thế giới", Language: "en", Level: "A1"},
+		}
+	}
+
 	vocabs, err := h.vocabService.GetRandomSet(context.Background(), language, level, count)
 	if err != nil || len(vocabs) == 0 {
 		h.log.Error("failed to get vocabs, using fallback", "err", err, "language", language, "level", level)
