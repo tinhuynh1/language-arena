@@ -116,6 +116,7 @@ func (c *Client) SendMessage(msg WSMessage) {
 	if err != nil {
 		return
 	}
+	defer func() { recover() }() //nolint:errcheck // send on closed channel during grace period is expected
 	select {
 	case c.Send <- data:
 	default:

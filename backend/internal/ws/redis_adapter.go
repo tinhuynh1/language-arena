@@ -25,6 +25,7 @@ const (
 	RedisProxyAction = "proxy_action"
 	RedisProxyLeft   = "proxy_left"
 	RedisRelayWS     = "relay_ws"
+	RedisMatchFound  = "match_found"
 )
 
 // RedisMessage is the envelope for all inter-node communication.
@@ -174,4 +175,92 @@ func (ra *RedisAdapter) Subscribe() {
 
 func (ra *RedisAdapter) Close() {
 	ra.client.Close()
+}
+
+// --- Matchmaking Queue ---
+
+const (
+	matchQueuePrefix = "lingo:queue:"
+	matchQueueTTL    = 60 // seconds
+)
+
+// RedisQueueEntry is stored in the per-bucket Redis hash while a player is waiting.
+type RedisQueueEntry struct {
+	UserID    string `json:"user_id"`
+	Username  string `json:"username"`
+	NodeID    string `json:"node_id"`
+	Timestamp int64  `json:"timestamp"`
+}
+
+// enqueueOrMatchScript atomically finds an opponent or adds the caller to the queue.
+// Returns the opponent's JSON entry if matched, or false if now waiting.
+var enqueueOrMatchScript = redis.NewScript(`
+local key = KEYS[1]
+local myUserID = ARGV[1]
+local myEntry = ARGV[2]
+local now = tonumber(ARGV[3])
+local ttl = tonumber(ARGV[4])
+
+local entries = redis.call('HGETALL', key)
+for i = 1, #entries, 2 do
+    local uid = entries[i]
+    local entryJson = entries[i+1]
+    if uid ~= myUserID then
+        local ok, entry = pcall(cjson.decode, entryJson)
+        if ok and entry and (now - entry.timestamp) <= ttl then
+            redis.call('HDEL', key, uid)
+            return entryJson
+        else
+            redis.call('HDEL', key, uid)
+        end
+    end
+end
+
+redis.call('HSET', key, myUserID, myEntry)
+redis.call('EXPIRE', key, ttl * 2)
+return false
+`)
+
+func matchQueueKey(language, level, quizType, mode string) string {
+	return matchQueuePrefix + language + ":" + level + ":" + quizType + ":" + mode
+}
+
+// EnqueueOrMatch atomically either matches the caller with a waiting player or
+// adds them to the queue. Returns the opponent entry on match, nil when waiting.
+func (ra *RedisAdapter) EnqueueOrMatch(userID, username, language, level, quizType, mode string) (*RedisQueueEntry, error) {
+	entry := RedisQueueEntry{
+		UserID:    userID,
+		Username:  username,
+		NodeID:    ra.NodeID,
+		Timestamp: time.Now().Unix(),
+	}
+	data, err := json.Marshal(entry)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx := context.Background()
+	key := matchQueueKey(language, level, quizType, mode)
+	result, err := enqueueOrMatchScript.Run(ctx, ra.client, []string{key},
+		userID, string(data), time.Now().Unix(), matchQueueTTL,
+	).Text()
+
+	if err == redis.Nil {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	var opponent RedisQueueEntry
+	if err := json.Unmarshal([]byte(result), &opponent); err != nil {
+		return nil, err
+	}
+	return &opponent, nil
+}
+
+// RemoveFromQueue removes a player from the Redis matchmaking queue bucket.
+func (ra *RedisAdapter) RemoveFromQueue(userID, language, level, quizType, mode string) {
+	ctx := context.Background()
+	ra.client.HDel(ctx, matchQueueKey(language, level, quizType, mode), userID)
 }
