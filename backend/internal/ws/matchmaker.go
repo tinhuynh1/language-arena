@@ -72,15 +72,33 @@ func (m *Matchmaker) enqueueRedis(client *Client, language, level string, quizTy
 	modeStr := string(mode)
 
 	if opponent.NodeID == m.hub.Redis.NodeID {
-		// Both players happen to be on this instance
+		// Both players are on this instance.
+		// Try pending map first; fall back to h.Clients to handle the race where
+		// the opponent's goroutine hasn't yet written to pending after EnqueueOrMatch returned.
 		m.mu.Lock()
 		localEntry, ok := m.pending[opponent.UserID]
-		delete(m.pending, opponent.UserID)
+		if ok {
+			delete(m.pending, opponent.UserID)
+		}
 		m.mu.Unlock()
 
+		var localClient *Client
 		if ok {
-			room.AddPlayer(localEntry.Client)
-			localEntry.Client.SendMessage(WSMessage{
+			localClient = localEntry.Client
+		} else {
+			m.hub.mu.RLock()
+			for c := range m.hub.Clients {
+				if c.ID.String() == opponent.UserID {
+					localClient = c
+					break
+				}
+			}
+			m.hub.mu.RUnlock()
+		}
+
+		if localClient != nil {
+			room.AddPlayer(localClient)
+			localClient.SendMessage(WSMessage{
 				Type: MsgMatchFound,
 				Data: MatchFoundData{RoomID: room.ID, Opponent: client.Username, Mode: modeStr},
 			})
