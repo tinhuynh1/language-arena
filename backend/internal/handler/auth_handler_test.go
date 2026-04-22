@@ -199,3 +199,24 @@ func TestLoginHandler_InvalidCredentials(t *testing.T) {
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
+
+func TestRegisterHandler_UsernameExists(t *testing.T) {
+	reader := &mockAuthUserReader{
+		findByEmailFn: func(_ context.Context, _ string) (*model.User, error) {
+			return nil, errors.New("not found")
+		},
+	}
+	writer := &mockAuthUserWriter{createFn: func(_ context.Context, _ *model.User) error { return service.ErrUsernameExists }}
+	svc := service.NewAuthService(reader, writer, &config.JWTConfig{Secret: "s", Expiration: time.Hour})
+	h := NewAuthHandler(svc)
+
+	body := `{"username":"u","email":"new@test.com","password":"pass123"}`
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(body))
+	c.Request.Header.Set("Content-Type", "application/json")
+
+	h.Register(c)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
