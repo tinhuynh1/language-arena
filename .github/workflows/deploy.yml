@@ -13,15 +13,15 @@ env:
   REGION: asia-southeast1-a
   REPOSITORY: lingo-sniper
   CLUSTER_NAME: lingo-sniper-cluster
-  # Tên Github Repo của bạn (Ví dụ: user/repo)
+  # Your Github Repo Name (Example: user/repo)
   GITHUB_REPO: tinhuynh1/language-arena
   
-  # === BẠN CẦN THAY THẾ (CẬP NHẬT) BIẾN NÀY SAU KHI CHẠY SCRIPT WIF ===
-  # Định dạng: projects/123456789/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+  # === YOU NEED TO REPLACE (UPDATE) THIS VARIABLE AFTER RUNNING WIF SCRIPT ===
+  # Format: projects/123456789/locations/global/workloadIdentityPools/github-pool/providers/github-provider
   WORKLOAD_IDENTITY_PROVIDER: 'projects/696260201579/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
   
-  # === BẠN CẦN THAY THẾ (CẬP NHẬT) BIẾN NÀY DƯỚI DẠNG SECRET TRONG GITHUB ===
-  # Nhưng tạm thời chúng ta hardcode email vào đây để tiện demo
+  # === YOU NEED TO REPLACE (UPDATE) THIS VARIABLE AS A GITHUB SECRET ===
+  # But temporarily we hardcode the email here for demo purposes
   SERVICE_ACCOUNT: 'github-actions@lingo-sniper-prod.iam.gserviceaccount.com'
 
 jobs:
@@ -31,7 +31,7 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     permissions:
       contents: 'read'
-      id-token: 'write' # Bắt buộc đối với WIF
+      id-token: 'write' # Mandatory for WIF
 
     steps:
     - name: Checkout repository
@@ -77,13 +77,13 @@ jobs:
     - name: Deploy to GKE
       run: |
         cd k8s
-        # Thay thế Tag ảnh bằng mã Commit SHA của Github
+        # Replace image tag with Github Commit SHA
         kustomize edit set image asia-southeast1-docker.pkg.dev/lingo-sniper-prod/lingo-sniper/backend=asia-southeast1-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/backend:${{ github.sha }}
         kustomize edit set image asia-southeast1-docker.pkg.dev/lingo-sniper-prod/lingo-sniper/frontend=asia-southeast1-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/frontend:${{ github.sha }}
         
-        # Deploy config apply thay vì manifest thô
+        # Apply config instead of raw manifest
         kustomize build . | kubectl apply -f -
         
-        # Đợi Pods ổn định
+        # Wait for Pods to stabilize
         kubectl rollout status deployment/backend -n lingo-sniper --timeout=300s
         kubectl rollout status deployment/frontend -n lingo-sniper --timeout=300s
