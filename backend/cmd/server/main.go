@@ -40,11 +40,21 @@ func main() {
 	db.SetMaxIdleConns(cfg.Database.MaxIdleConns)
 	db.SetConnMaxLifetime(cfg.Database.ConnMaxLifetime)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := db.PingContext(ctx); err != nil {
-		slog.Error("database ping failed", "err", err)
-		os.Exit(1)
+	const dbMaxRetries = 10
+	const dbRetryDelay = 3 * time.Second
+	for i := 1; i <= dbMaxRetries; i++ {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		err := db.PingContext(ctx)
+		cancel()
+		if err == nil {
+			break
+		}
+		if i == dbMaxRetries {
+			slog.Error("database ping failed", "err", err, "attempts", dbMaxRetries)
+			os.Exit(1)
+		}
+		slog.Warn("database not ready, retrying", "attempt", i, "of", dbMaxRetries, "err", err, "retry_in", dbRetryDelay)
+		time.Sleep(dbRetryDelay)
 	}
 	log.Info("database connected")
 
