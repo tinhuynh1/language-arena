@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { api, type LeaderboardEntry, type LeaderboardResponse } from '@/lib/api';
+import { useLocale } from '@/i18n/LocaleProvider';
 
 const MEDAL_COLORS = ['#ffd700', '#c0c0c0', '#cd7f32'];
 const MEDAL_GLOW = ['rgba(255,215,0,0.5)', 'rgba(192,192,192,0.5)', 'rgba(205,127,50,0.5)'];
@@ -34,6 +35,7 @@ function SkeletonRow() {
 }
 
 export default function LeaderboardPage() {
+  const { t } = useLocale();
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -89,13 +91,13 @@ export default function LeaderboardPage() {
         <div className="text-center mb-14 motion-safe:animate-fade-in-up">
           <div className="inline-block px-3 py-1 mb-4 text-[10px] font-heading uppercase tracking-[0.3em] rounded-sm"
                style={{ background: 'rgba(0,212,255,0.1)', color: '#00d4ff', border: '1px solid rgba(0,212,255,0.2)' }}>
-            Global Rankings
+            {t('leaderboard.badge')}
           </div>
           <h1 className="font-heading font-bold text-4xl sm:text-5xl lg:text-6xl uppercase tracking-wider mb-2">
-            Leader<span className="text-glow-cyan" style={{ color: '#00d4ff' }}>board</span>
+            {t('leaderboard.title').replace('{accent}', '')}<span className="text-glow-cyan" style={{ color: '#00d4ff' }}>{t('leaderboard.titleAccent')}</span>
           </h1>
           <p className="text-sm font-heading tracking-widest text-[var(--color-text-muted)] mt-4">
-            TOP SNIPERS RANKED BY FASTEST REACTION TIME
+            {t('leaderboard.subtitle')}
           </p>
         </div>
 
@@ -106,8 +108,8 @@ export default function LeaderboardPage() {
         ) : entries.length === 0 ? (
           <div className="text-center py-24 text-[var(--color-text-muted)] relative z-10 card" style={{ background: 'rgba(255,255,255,0.01)' }}>
             <div className="text-5xl mb-4 opacity-50" aria-hidden="true">◎</div>
-            <p className="font-heading text-xl uppercase tracking-wider mb-2" style={{ color: '#00d4ff' }}>No players yet</p>
-            <p className="text-sm text-[var(--color-text-secondary)]">The arena is empty. Be the first to claim #1!</p>
+            <p className="font-heading text-xl uppercase tracking-wider mb-2" style={{ color: '#00d4ff' }}>{t('leaderboard.empty.title')}</p>
+            <p className="text-sm text-[var(--color-text-secondary)]">{t('leaderboard.empty.desc')}</p>
           </div>
         ) : (
           <div className="relative z-10">
@@ -182,12 +184,12 @@ export default function LeaderboardPage() {
             {/* Table Header */}
             <div className="grid grid-cols-12 gap-3 px-5 py-3 mb-2 text-[10px] font-heading uppercase tracking-[0.2em] text-[var(--color-text-muted)] border-b border-[rgba(255,255,255,0.05)] sticky top-0 bg-[rgba(8,12,20,0.8)] backdrop-blur-md z-20"
                  role="row">
-              <div className="col-span-1 hidden sm:block" role="columnheader">Rank</div>
+              <div className="col-span-1 hidden sm:block" role="columnheader">{t('leaderboard.col.rank')}</div>
               <div className="col-span-2 sm:col-span-1 block sm:hidden" role="columnheader">#</div>
-              <div className="col-span-4 sm:col-span-3" role="columnheader">Player</div>
-              <div className="col-span-3 sm:col-span-3 text-right" role="columnheader">Avg Reaction</div>
-              <div className="col-span-2 text-right hidden sm:block" role="columnheader">Games</div>
-              <div className="col-span-3 sm:col-span-3 text-right" role="columnheader">Best</div>
+              <div className="col-span-4 sm:col-span-3" role="columnheader">{t('leaderboard.col.player')}</div>
+              <div className="col-span-3 sm:col-span-3 text-right" role="columnheader">{t('leaderboard.col.avgReaction')}</div>
+              <div className="col-span-2 text-right hidden sm:block" role="columnheader">{t('leaderboard.col.games')}</div>
+              <div className="col-span-3 sm:col-span-3 text-right" role="columnheader">{t('leaderboard.col.best')}</div>
             </div>
 
             {/* Rows */}
@@ -251,10 +253,10 @@ export default function LeaderboardPage() {
                     borderRadius: '3px',
                   }}
                 >
-                  ← Prev
+                  {t('leaderboard.prev')}
                 </button>
                 <span className="font-mono text-sm text-[var(--color-text-muted)]">
-                  Page <span className="text-[var(--color-text-primary)] font-bold">{page}</span> / {totalPages}
+                  {t('leaderboard.page')} <span className="text-[var(--color-text-primary)] font-bold">{page}</span> / {totalPages}
                 </span>
                 <button
                   onClick={() => fetchPage(page + 1)}
@@ -267,14 +269,14 @@ export default function LeaderboardPage() {
                     borderRadius: '3px',
                   }}
                 >
-                  Next →
+                  {t('leaderboard.next')}
                 </button>
               </div>
             )}
 
             {/* Total count */}
             <div className="text-center mt-4 text-xs font-mono text-[var(--color-text-muted)]">
-              {total} snipers ranked
+              {t('leaderboard.snipersRanked', { count: total })}
             </div>
           </div>
         )}

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
+import { useLocale } from '@/i18n/LocaleProvider';
 
 export default function LoginPage() {
   const [isRegister, setIsRegister] = useState(false);
@@ -14,6 +15,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   const { login, register, user, loading: authLoading } = useAuth();
+  const { t } = useLocale();
   const router = useRouter();
 
   useEffect(() => {
@@ -34,7 +36,7 @@ export default function LoginPage() {
       }
       router.push('/play');
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
+      setError(err instanceof Error ? err.message : t('login.error.default'));
     } finally {
       setLoading(false);
     }
@@ -70,10 +72,10 @@ export default function LoginPage() {
             </div>
           </Link>
           <h1 className="font-heading font-bold text-2xl uppercase tracking-wider">
-            {isRegister ? 'Create Account' : 'Welcome Back'}
+            {isRegister ? t('login.title.register') : t('login.title.login')}
           </h1>
           <p className="text-sm text-[var(--color-text-muted)] mt-2">
-            {isRegister ? 'Join the arena and start training' : 'Sign in to resume your training'}
+            {isRegister ? t('login.subtitle.register') : t('login.subtitle.login')}
           </p>
         </div>
 
@@ -82,7 +84,7 @@ export default function LoginPage() {
           {isRegister && (
             <div>
               <label htmlFor="username" className="block text-xs font-heading uppercase tracking-wider text-[var(--color-text-muted)] mb-2">
-                Username
+                {t('login.label.username')}
               </label>
               <input
                 id="username"
@@ -101,7 +103,7 @@ export default function LoginPage() {
 
           <div>
             <label htmlFor="email" className="block text-xs font-heading uppercase tracking-wider text-[var(--color-text-muted)] mb-2">
-              Email
+              {t('login.label.email')}
             </label>
             <input
               id="email"
@@ -118,7 +120,7 @@ export default function LoginPage() {
 
           <div>
             <label htmlFor="password" className="block text-xs font-heading uppercase tracking-wider text-[var(--color-text-muted)] mb-2">
-              Password
+              {t('login.label.password')}
             </label>
             <input
               id="password"
@@ -151,21 +153,21 @@ export default function LoginPage() {
             aria-busy={loading}
           >
             {loading
-              ? 'Please wait…'
+              ? t('login.loading')
               : isRegister
-                ? 'Create Account'
-                : 'Sign In'}
+                ? t('login.submit.register')
+                : t('login.submit.login')}
           </button>
         </form>
 
         {/* Toggle */}
         <p className="text-center text-sm text-[var(--color-text-muted)] mt-6">
-          {isRegister ? 'Already have an account?' : "Don't have an account?"}{' '}
+          {isRegister ? t('login.toggle.hasAccount') : t('login.toggle.noAccount')}{' '}
           <button
             onClick={switchMode}
             className="font-heading uppercase tracking-wider text-[var(--color-accent-neon)] hover:underline focus-visible:underline"
           >
-            {isRegister ? 'Sign In' : 'Register'}
+            {isRegister ? t('login.toggle.signin') : t('login.toggle.register')}
           </button>
         </p>
       </div>

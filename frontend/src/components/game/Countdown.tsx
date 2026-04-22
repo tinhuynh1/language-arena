@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useLocale } from '@/i18n/LocaleProvider';
 
 interface CountdownProps {
   ms: number;
@@ -8,6 +9,7 @@ interface CountdownProps {
 }
 
 export default function Countdown({ ms, onComplete }: CountdownProps) {
+  const { t } = useLocale();
   const totalSeconds = Math.ceil(ms / 1000);
   const [count, setCount] = useState(totalSeconds);
   const [animKey, setAnimKey] = useState(0);
@@ -152,7 +154,7 @@ export default function Countdown({ ms, onComplete }: CountdownProps) {
                 : '0 0 40px rgba(0,212,255,0.5)',
             }}
           >
-            {count > 0 ? count : 'GO!'}
+            {count > 0 ? count : t('countdown.go')}
           </div>
           {count > 0 && (
             <div
@@ -163,7 +165,7 @@ export default function Countdown({ ms, onComplete }: CountdownProps) {
                 letterSpacing: '0.4em',
               }}
             >
-              LOCK ON TARGET
+              {t('countdown.lockOn')}
             </div>
           )}
         </div>

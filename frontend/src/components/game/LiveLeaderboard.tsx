@@ -1,6 +1,7 @@
 'use client';
 
 import type { LeaderboardPlayer } from '@/hooks/useWebSocket';
+import { useLocale } from '@/i18n/LocaleProvider';
 
 interface LiveLeaderboardProps {
   players: LeaderboardPlayer[];
@@ -8,12 +9,14 @@ interface LiveLeaderboardProps {
 }
 
 export default function LiveLeaderboard({ players, round }: LiveLeaderboardProps) {
+  const { t } = useLocale();
+
   if (!players || players.length === 0) return null;
 
   return (
     <div className="absolute top-20 right-4 z-30 w-64">
       <div className="text-xs font-heading uppercase tracking-widest text-[var(--color-text-muted)] mb-2 text-right">
-        Live Ranking
+        {t('live.ranking')}
       </div>
       <div className="space-y-1">
         {players.map((p, i) => (

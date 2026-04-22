@@ -128,6 +128,7 @@ func setupRouter(
 	r.Use(middleware.RequestID())
 	r.Use(middleware.RequestLogger())
 	r.Use(middleware.CORSMiddleware(cfg.CORS.AllowedOrigins))
+	r.Use(middleware.LocaleMiddleware())
 
 	// Health & Readiness probes
 	r.GET("/health", func(c *gin.Context) {

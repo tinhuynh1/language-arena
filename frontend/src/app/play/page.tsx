@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useGame } from '@/hooks/useGame';
+import { useLocale } from '@/i18n/LocaleProvider';
 import type { QuizType } from '@/hooks/useWebSocket';
 import GameCanvas from '@/components/game/GameCanvas';
 import Countdown from '@/components/game/Countdown';
@@ -60,6 +61,7 @@ export default function PlayPage() {
   const { user } = useAuth();
   const game = useGame();
   const router = useRouter();
+  const { t } = useLocale();
 
   const [selectedMode, setSelectedMode] = useState<'solo' | 'duel' | 'battle'>('solo');
   const [selectedLang, setSelectedLang] = useState<string>('en');
@@ -158,10 +160,10 @@ export default function PlayPage() {
           {/* Title */}
           <div className="animate-fade-in-up">
             <h1 className="font-heading font-bold text-3xl sm:text-5xl mb-3 uppercase tracking-wider">
-              Select <span className="text-gradient-neon text-glow">Mission</span>
+              {t('play.title').replace('{accent}', '')} <span className="text-gradient-neon text-glow">{t('play.titleAccent')}</span>
             </h1>
             <p className="text-[var(--color-text-secondary)] mb-8 sm:mb-10 text-sm sm:text-base">
-              Choose your mode, language, and difficulty level
+              {t('play.subtitle')}
             </p>
             {/* Error toast */}
             {game.errorMessage && (
@@ -202,10 +204,10 @@ export default function PlayPage() {
                     <cfg.Icon color={isSelected ? cfg.color : 'currentColor'} />
                   </div>
                   <div className="font-heading font-bold text-base sm:text-lg mb-1 uppercase tracking-wide" style={{ color: isSelected ? cfg.color : 'inherit' }}>
-                    {mode === 'solo' ? 'Solo' : mode === 'duel' ? '1v1 Duel' : 'Battle'}
+                    {mode === 'solo' ? t('play.mode.solo') : mode === 'duel' ? t('play.mode.duel') : t('play.mode.battle')}
                   </div>
                   <p className="text-xs sm:text-sm text-[var(--color-text-muted)]">
-                    {mode === 'solo' ? 'Practice alone' : mode === 'duel' ? 'Real-time match' : 'Up to 100 players'}
+                    {mode === 'solo' ? t('play.mode.solo.desc') : mode === 'duel' ? t('play.mode.duel.desc') : t('play.mode.battle.desc')}
                   </p>
                 </button>
               );
@@ -215,8 +217,8 @@ export default function PlayPage() {
           {/* Language Selection */}
           <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6 sm:mb-8 animate-fade-in-up delay-200">
             {[
-              { lang: 'en', flagCode: 'gb', label: 'English (CEFR)' },
-              { lang: 'zh', flagCode: 'cn', label: 'Chinese (HSK)' },
+              { lang: 'en', flagCode: 'gb', label: t('play.lang.en') },
+              { lang: 'zh', flagCode: 'cn', label: t('play.lang.zh') },
             ].map(({ lang, flagCode, label }) => {
               const isSelected = selectedLang === lang;
               return (
@@ -250,7 +252,7 @@ export default function PlayPage() {
           {/* Level Selection */}
           <div className="mb-6 sm:mb-8 animate-fade-in-up delay-300">
             <div className="text-xs sm:text-sm font-heading uppercase tracking-widest text-[var(--color-text-muted)] mb-3">
-              Vocabulary Level
+              {t('play.level.label')}
             </div>
             <div className="flex gap-2 sm:gap-3 justify-center flex-wrap">
               {levels.map(l => (
@@ -276,7 +278,7 @@ export default function PlayPage() {
           {/* Quiz Type Selection */}
           <div className="mb-8 sm:mb-10 animate-fade-in-up delay-400">
             <div className="text-xs sm:text-sm font-heading uppercase tracking-widest text-[var(--color-text-muted)] mb-3">
-              Quiz Type
+              {t('play.quiz.label')}
             </div>
             <div className="grid grid-cols-3 gap-2 sm:gap-3">
               {quizTypes.map(q => {
@@ -305,7 +307,7 @@ export default function PlayPage() {
           {/* Action Buttons */}
           <div className="space-y-4 animate-fade-in-up delay-400">
             <button onClick={handleStart} className="btn-primary text-base sm:text-lg px-10 sm:px-14 py-4 sm:py-5 w-full max-w-sm mx-auto block">
-              {selectedMode === 'battle' ? 'CREATE ROOM' : selectedMode === 'duel' ? 'FIND OPPONENT' : 'START TRAINING'}
+              {selectedMode === 'battle' ? t('play.btn.createRoom') : selectedMode === 'duel' ? t('play.btn.findOpponent') : t('play.btn.startTraining')}
             </button>
 
             {selectedMode === 'battle' && (
@@ -315,14 +317,14 @@ export default function PlayPage() {
                     onClick={() => setShowJoinInput(true)}
                     className="btn-secondary text-sm px-8 py-3"
                   >
-                    JOIN WITH CODE
+                    {t('play.btn.joinWithCode')}
                   </button>
                 ) : (
                   <div className="flex gap-2 justify-center items-center max-w-xs mx-auto">
                     <input
                       type="text"
                       className="input-field text-center font-mono font-bold text-lg uppercase tracking-[0.3em]"
-                      placeholder="ROOM CODE"
+                      placeholder={t('play.placeholder.roomCode')}
                       maxLength={6}
                       value={joinCode}
                       onChange={e => setJoinCode(e.target.value.toUpperCase())}
@@ -330,7 +332,7 @@ export default function PlayPage() {
                       autoFocus
                     />
                     <button onClick={handleJoinByCode} className="btn-primary py-3 px-4">
-                      JOIN
+                      {t('play.btn.join')}
                     </button>
                   </div>
                 )}
@@ -351,24 +353,24 @@ export default function PlayPage() {
             <>
               <div className="w-20 h-20 border-2 border-[var(--color-accent-orange)] border-t-transparent rounded-full animate-spin mx-auto mb-6" />
               <div className="font-heading font-bold text-2xl sm:text-3xl mb-2 uppercase" style={{ color: '#ff6b35' }}>
-                Connecting...
+                {t('play.queuing.connecting')}
               </div>
               <p className="text-sm text-[var(--color-text-muted)]">
-                Establishing secure connection
+                {t('play.queuing.connectingSub')}
               </p>
             </>
           ) : (
             <>
               <div className="w-20 h-20 border-2 border-[var(--color-accent-neon)] border-t-transparent rounded-full animate-spin mx-auto mb-6" />
               <div className="font-heading font-bold text-2xl sm:text-3xl mb-2 uppercase text-glow">
-                {selectedMode === 'duel' ? 'Finding Opponent...' : selectedMode === 'battle' ? 'Creating Room...' : 'Preparing Arena...'}
+                {selectedMode === 'duel' ? t('play.queuing.findingOpponent') : selectedMode === 'battle' ? t('play.queuing.creatingRoom') : t('play.queuing.preparingArena')}
               </div>
               <p className="text-sm text-[var(--color-text-muted)]">
                 {selectedLevel} • {selectedLang === 'en' ? 'English' : 'Chinese'}
               </p>
             </>
           )}
-          <button onClick={handleLeave} className="btn-secondary mt-8 text-sm">CANCEL</button>
+          <button onClick={handleLeave} className="btn-secondary mt-8 text-sm">{t('play.queuing.cancel')}</button>
         </div>
       </div>
     );
@@ -396,9 +398,9 @@ export default function PlayPage() {
           {/* Title */}
           <div className="motion-safe:animate-fade-in-up mb-6">
             <h1 className="font-heading font-bold text-3xl sm:text-4xl mb-1 uppercase tracking-wider">
-              Battle <span className="text-glow-cyan" style={{ color: '#00d4ff' }}>Room</span>
+              {t('play.lobby.title').replace('{accent}', '')} <span className="text-glow-cyan" style={{ color: '#00d4ff' }}>{t('play.lobby.titleAccent')}</span>
             </h1>
-            <p className="text-sm text-[var(--color-text-muted)]">Waiting for players to join</p>
+            <p className="text-sm text-[var(--color-text-muted)]">{t('play.lobby.subtitle')}</p>
           </div>
 
           {/* Room Code Card */}
@@ -408,7 +410,7 @@ export default function PlayPage() {
             backdropFilter: 'blur(8px)',
           }}>
             <div className="text-xs font-heading uppercase tracking-[0.25em] text-[var(--color-text-muted)] mb-2">
-              Share this code
+              {t('play.lobby.shareCode')}
             </div>
             <button
               className="w-full font-mono font-bold text-4xl sm:text-5xl tracking-[0.3em] text-glow cursor-pointer transition-all hover:scale-[1.02] focus-visible:ring-2 focus-visible:ring-[#00ff88] focus-visible:outline-none rounded-sm bg-transparent border-none p-0"
@@ -419,7 +421,7 @@ export default function PlayPage() {
             >
               {game.roomCode}
             </button>
-            <div className="text-xs text-[var(--color-text-muted)] mt-2 opacity-60">Click to copy</div>
+            <div className="text-xs text-[var(--color-text-muted)] mt-2 opacity-60">{t('play.lobby.clickToCopy')}</div>
           </div>
 
           {/* Player List */}
@@ -429,7 +431,7 @@ export default function PlayPage() {
           }}>
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-heading uppercase tracking-wider text-[var(--color-text-muted)]">
-                Players
+                {t('play.lobby.players')}
               </span>
               <span className="font-mono font-bold text-sm" style={{ color: '#00ff88' }}>
                 {game.playerCount}
@@ -466,12 +468,12 @@ export default function PlayPage() {
                         <svg width="10" height="10" viewBox="0 0 24 24" fill="#00d4ff" stroke="none">
                           <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
                         </svg>
-                        HOST
+                        {t('play.lobby.host')}
                       </span>
                     )}
                     {name === user.username && !isPlayerHost && (
                       <span className="text-[10px] font-heading uppercase tracking-wider text-[var(--color-text-muted)] opacity-50">
-                        YOU
+                        {t('play.lobby.you')}
                       </span>
                     )}
                   </div>
@@ -488,7 +490,7 @@ export default function PlayPage() {
                 className="btn-primary text-base px-10 py-3.5 cursor-pointer"
                 disabled={game.playerCount < 2}
               >
-                {game.playerCount < 2 ? 'WAITING FOR PLAYERS...' : `START GAME (${game.playerCount} players)`}
+                {game.playerCount < 2 ? t('play.lobby.waiting') : t('play.lobby.startGame', { count: game.playerCount })}
               </button>
             ) : (
               <button
@@ -501,11 +503,11 @@ export default function PlayPage() {
                   borderRadius: '3px',
                 }}
               >
-                WAITING FOR HOST TO START...
+                {t('play.lobby.waitingHost')}
               </button>
             )}
             <button onClick={handleLeave} className="btn-secondary py-3.5 px-6 cursor-pointer">
-              LEAVE
+              {t('play.lobby.leave')}
             </button>
           </div>
         </div>
@@ -519,7 +521,7 @@ export default function PlayPage() {
       <div className="min-h-screen flex items-center justify-center px-6">
         <div className="text-center">
           <div className="font-heading font-bold text-3xl sm:text-4xl mb-2 uppercase text-glow" style={{ color: '#00ff88' }}>
-            {game.mode === 'duel' ? 'MATCH FOUND' : game.mode === 'battle' ? 'GAME STARTING' : 'ARENA READY'}
+            {game.mode === 'duel' ? t('play.matched.matchFound') : game.mode === 'battle' ? t('play.matched.gameStarting') : t('play.matched.arenaReady')}
           </div>
           {game.mode === 'duel' && game.opponent && (
             <div className="text-lg text-[var(--color-text-secondary)] mb-6">
@@ -528,7 +530,7 @@ export default function PlayPage() {
           )}
           {game.mode === 'battle' && (
             <div className="text-lg text-[var(--color-text-secondary)] mb-6">
-              {game.playerCount} players
+              {t('play.matched.players', { count: game.playerCount })}
             </div>
           )}
           <button
@@ -540,11 +542,11 @@ export default function PlayPage() {
               }`}
             style={{ borderRadius: '3px' }}
           >
-            {readySent ? '✓ WAITING...' : 'READY'}
+            {readySent ? t('play.matched.waiting') : t('play.matched.ready')}
           </button>
           {readySent && (
             <p className="text-sm text-[var(--color-text-muted)] mt-3 animate-pulse">
-              Waiting for opponent to be ready...
+              {t('play.matched.waitingOpponent')}
             </p>
           )}
         </div>

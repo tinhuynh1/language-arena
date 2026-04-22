@@ -3,17 +3,19 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-
-const NAV_LINKS = [
-  { href: '/play', label: 'Play' },
-  { href: '/leaderboard', label: 'Leaderboard' },
-];
+import { useLocale } from '@/i18n/LocaleProvider';
 
 export default function Header() {
   const { user, logout, loading } = useAuth();
+  const { locale, setLocale, t } = useLocale();
   const pathname = usePathname();
 
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
+
+  const NAV_LINKS = [
+    { href: '/play', label: t('nav.play') },
+    { href: '/leaderboard', label: t('nav.leaderboard') },
+  ];
 
   return (
     <header
@@ -65,6 +67,26 @@ export default function Header() {
             </Link>
           ))}
 
+          {/* Language Switcher */}
+          <div className="flex items-center gap-0.5 ml-2 pl-2 border-l border-[var(--color-border-default)]">
+            <button
+              onClick={() => setLocale('en')}
+              className={`px-1.5 py-1 text-base transition-all duration-150 cursor-pointer rounded-sm ${locale === 'en' ? 'opacity-100 scale-110' : 'opacity-40 hover:opacity-70'}`}
+              aria-label="English"
+              title="English"
+            >
+              🇬🇧
+            </button>
+            <button
+              onClick={() => setLocale('vi')}
+              className={`px-1.5 py-1 text-base transition-all duration-150 cursor-pointer rounded-sm ${locale === 'vi' ? 'opacity-100 scale-110' : 'opacity-40 hover:opacity-70'}`}
+              aria-label="Tiếng Việt"
+              title="Tiếng Việt"
+            >
+              🇻🇳
+            </button>
+          </div>
+
           {!loading && (
             user ? (
               <div className="flex items-center gap-1 ml-3 pl-3 border-l border-[var(--color-border-default)]">
@@ -83,12 +105,12 @@ export default function Header() {
                   className="px-3 py-2 text-sm font-heading uppercase tracking-widest text-[var(--color-text-muted)] hover:text-[var(--color-accent-red)] transition-colors duration-150 cursor-pointer"
                   aria-label="Log out"
                 >
-                  Log Out
+                  {t('nav.logout')}
                 </button>
               </div>
             ) : (
               <Link href="/login" className="btn-primary ml-4 text-sm py-2.5 px-6">
-                Sign In
+                {t('nav.signin')}
               </Link>
             )
           )}

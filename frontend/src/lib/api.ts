@@ -54,10 +54,16 @@ function getToken(): string | null {
   return localStorage.getItem('token');
 }
 
+function getLocale(): string {
+  if (typeof window === 'undefined') return 'en';
+  return localStorage.getItem('locale') || 'en';
+}
+
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const token = getToken();
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
+    'Accept-Language': getLocale(),
     ...(options?.headers as Record<string, string>),
   };
   if (token) {

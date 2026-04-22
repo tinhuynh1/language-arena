@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AuthProvider } from "@/hooks/useAuth";
+import { LocaleProvider } from "@/i18n/LocaleProvider";
 import Header from "@/components/layout/Header";
 import "@/styles/globals.css";
 
@@ -20,10 +21,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <AuthProvider>
-          <Header />
-          <main className="pt-[4.5rem] min-h-screen">
-            {children}
-          </main>
+          <LocaleProvider>
+            <Header />
+            <main className="pt-[4.5rem] min-h-screen">
+              {children}
+            </main>
+          </LocaleProvider>
         </AuthProvider>
       </body>
     </html>

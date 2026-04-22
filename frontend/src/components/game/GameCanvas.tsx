@@ -2,6 +2,8 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import type { Target, QuizType } from '@/hooks/useWebSocket';
+import { useLocale } from '@/i18n/LocaleProvider';
+import type { TranslationKey } from '@/i18n';
 
 interface GameCanvasProps {
   targets: Target[];
@@ -20,11 +22,11 @@ interface GameCanvasProps {
   claimedTargets: Record<string, string>;
 }
 
-const QUIZ_LABELS: Record<QuizType, string> = {
-  meaning_to_word: 'Find the word for',
-  word_to_meaning: 'Find the meaning of',
-  word_to_ipa: 'Find the IPA for',
-  word_to_pinyin: 'Find the pinyin for',
+const QUIZ_LABEL_KEYS: Record<QuizType, TranslationKey> = {
+  meaning_to_word: 'game.quiz.meaningToWord',
+  word_to_meaning: 'game.quiz.wordToMeaning',
+  word_to_ipa: 'game.quiz.wordToIpa',
+  word_to_pinyin: 'game.quiz.wordToPinyin',
 };
 
 /* Floating particles for atmosphere */
@@ -94,6 +96,7 @@ export default function GameCanvas({
   onHit,
   claimedTargets,
 }: GameCanvasProps) {
+  const { t } = useLocale();
   const [hitTargets, setHitTargets] = useState<Set<string>>(new Set());
   const [answered, setAnswered] = useState(false);
   const [showPopup, setShowPopup] = useState<{ x: number; y: number; text: string; correct: boolean } | null>(null);
@@ -201,7 +204,7 @@ export default function GameCanvas({
           }}>
             <CrosshairIcon size={18} color="#00ff88" />
             <div>
-              <div className="text-[10px] sm:text-xs text-[var(--color-text-muted)] font-heading uppercase tracking-widest leading-none">You</div>
+              <div className="text-[10px] sm:text-xs text-[var(--color-text-muted)] font-heading uppercase tracking-widest leading-none">{t('game.hud.you')}</div>
               <div className="text-2xl sm:text-4xl font-heading font-bold text-glow leading-none mt-0.5" style={{ color: '#00ff88' }}>{myCorrect}<span className="text-base sm:text-xl text-[var(--color-text-muted)]" >/{totalRounds}</span></div>
             </div>
           </div>
@@ -213,7 +216,7 @@ export default function GameCanvas({
               border: '1px solid rgba(255,255,255,0.06)',
               backdropFilter: 'blur(8px)',
             }}>
-              <div className="text-xs sm:text-sm text-[var(--color-text-muted)] font-heading uppercase tracking-widest">Round</div>
+              <div className="text-xs sm:text-sm text-[var(--color-text-muted)] font-heading uppercase tracking-widest">{t('game.hud.round')}</div>
               <div className="text-xl sm:text-3xl font-heading font-bold">
                 {round}<span className="text-[var(--color-text-muted)] text-base sm:text-xl">/{totalRounds}</span>
               </div>
@@ -261,7 +264,7 @@ export default function GameCanvas({
             }}>
               <CrosshairIcon size={16} color="#00d4ff" />
               <div className="text-sm font-heading uppercase tracking-wider font-bold" style={{ color: '#00d4ff' }}>
-                BATTLE
+                {t('game.hud.battle')}
               </div>
             </div>
           )}
@@ -269,7 +272,7 @@ export default function GameCanvas({
             <div className="flex items-center gap-2 px-4 py-2 rounded-sm opacity-50" style={{
               border: '1px solid rgba(255,255,255,0.06)',
             }}>
-              <div className="text-sm font-heading uppercase tracking-wider text-[var(--color-text-muted)]">SOLO</div>
+              <div className="text-sm font-heading uppercase tracking-wider text-[var(--color-text-muted)]">{t('game.hud.solo')}</div>
             </div>
           )}
         </div>
@@ -292,7 +295,7 @@ export default function GameCanvas({
       {/* ── Question Area ─────────────────────────────── */}
       <div className="absolute top-[6.5rem] sm:top-[7.5rem] left-1/2 -translate-x-1/2 z-30 text-center max-w-[90vw]">
         <div className="text-xs sm:text-sm text-[var(--color-text-muted)] font-heading uppercase tracking-[0.2em] mb-2">
-          {QUIZ_LABELS[quizType]}
+          {t(QUIZ_LABEL_KEYS[quizType])}
         </div>
         <div className="relative inline-block">
           {/* Animated border glow */}
@@ -412,7 +415,7 @@ export default function GameCanvas({
           </div>
           <div className="text-xs font-heading uppercase tracking-widest mt-1"
                style={{ color: showPopup.correct ? 'rgba(0,255,136,0.5)' : 'rgba(255,53,72,0.5)' }}>
-            {showPopup.correct ? 'HIT' : 'MISS'}
+            {showPopup.correct ? t('game.hit') : t('game.miss')}
           </div>
         </div>
       )}

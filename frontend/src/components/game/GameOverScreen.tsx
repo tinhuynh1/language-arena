@@ -1,6 +1,7 @@
 'use client';
 
 import type { GameOverData, LeaderboardPlayer } from '@/hooks/useWebSocket';
+import { useLocale } from '@/i18n/LocaleProvider';
 
 interface GameOverScreenProps {
   data: GameOverData | null;
@@ -11,13 +12,15 @@ interface GameOverScreenProps {
 }
 
 export default function GameOverScreen({ data, mode, username, onPlayAgain, onLeave }: GameOverScreenProps) {
+  const { t } = useLocale();
+
   if (!data) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[500px] gap-6">
         <div className="text-4xl font-heading font-bold text-[var(--color-accent-orange)]">
-          OPPONENT LEFT
+          {t('gameover.opponentLeft')}
         </div>
-        <button onClick={onLeave} className="btn-primary">BACK TO LOBBY</button>
+        <button onClick={onLeave} className="btn-primary">{t('gameover.backToLobby')}</button>
       </div>
     );
   }
@@ -33,17 +36,17 @@ export default function GameOverScreen({ data, mode, username, onPlayAgain, onLe
   }
 
   const titleText = () => {
-    if (mode === 'solo') return 'MISSION COMPLETE';
+    if (mode === 'solo') return t('gameover.missionComplete');
     if (mode === 'battle') {
-      if (myRank === 1) return '🏆 CHAMPION';
-      if (myRank === 2) return '🥈 RUNNER UP';
-      if (myRank === 3) return '🥉 THIRD PLACE';
-      if (myRank <= 10) return '🔥 TOP 10!';
-      return 'BATTLE OVER';
+      if (myRank === 1) return t('gameover.champion');
+      if (myRank === 2) return t('gameover.runnerUp');
+      if (myRank === 3) return t('gameover.thirdPlace');
+      if (myRank <= 10) return t('gameover.top10');
+      return t('gameover.battleOver');
     }
-    if (isWinner) return 'VICTORY';
-    if (data.winner === 'draw') return 'DRAW';
-    return 'DEFEAT';
+    if (isWinner) return t('gameover.victory');
+    if (data.winner === 'draw') return t('gameover.draw');
+    return t('gameover.defeat');
   };
 
   const titleColor = () => {
@@ -66,22 +69,22 @@ export default function GameOverScreen({ data, mode, username, onPlayAgain, onLe
           {titleText()}
         </div>
         <div className="text-lg text-[var(--color-text-secondary)] font-heading">
-          {mode === 'duel' && data.winner !== 'draw' && `Winner: ${data.winner}`}
-          {mode === 'battle' && myRank > 0 && `Your rank: #${myRank}`}
+          {mode === 'duel' && data.winner !== 'draw' && t('gameover.winner', { name: data.winner })}
+          {mode === 'battle' && myRank > 0 && t('gameover.yourRank', { rank: myRank })}
         </div>
       </div>
 
       {/* Correct Answers */}
       <div className="flex items-center gap-12">
         <div className="text-center">
-          <div className="text-sm text-[var(--color-text-muted)] font-heading uppercase tracking-wider mb-1">Correct</div>
+          <div className="text-sm text-[var(--color-text-muted)] font-heading uppercase tracking-wider mb-1">{t('gameover.correct')}</div>
           <div className="text-5xl font-heading font-bold" style={{ color: '#00ff88' }}>{data.your_correct}</div>
         </div>
         {mode === 'duel' && (
           <>
             <div className="text-3xl font-heading text-[var(--color-text-muted)]">VS</div>
             <div className="text-center">
-              <div className="text-sm text-[var(--color-text-muted)] font-heading uppercase tracking-wider mb-1">Opponent</div>
+              <div className="text-sm text-[var(--color-text-muted)] font-heading uppercase tracking-wider mb-1">{t('gameover.opponent')}</div>
               <div className="text-5xl font-heading font-bold" style={{ color: '#ff6b35' }}>{data.opponent_correct}</div>
             </div>
           </>
@@ -91,17 +94,17 @@ export default function GameOverScreen({ data, mode, username, onPlayAgain, onLe
       {/* Stats */}
       <div className="grid grid-cols-3 gap-6 w-full max-w-md">
         <div className="card text-center">
-          <div className="text-xs text-[var(--color-text-muted)] font-heading uppercase tracking-wider mb-1">Rounds</div>
+          <div className="text-xs text-[var(--color-text-muted)] font-heading uppercase tracking-wider mb-1">{t('gameover.rounds')}</div>
           <div className="text-2xl font-heading font-bold">{data.stats.total_rounds}</div>
         </div>
         <div className="card text-center">
-          <div className="text-xs text-[var(--color-text-muted)] font-heading uppercase tracking-wider mb-1">Avg Reaction</div>
+          <div className="text-xs text-[var(--color-text-muted)] font-heading uppercase tracking-wider mb-1">{t('gameover.avgReaction')}</div>
           <div className="text-2xl font-heading font-bold font-mono" style={{ color: reactionColor }}>
             {data.stats.avg_reaction_ms}ms
           </div>
         </div>
         <div className="card text-center">
-          <div className="text-xs text-[var(--color-text-muted)] font-heading uppercase tracking-wider mb-1">Accuracy</div>
+          <div className="text-xs text-[var(--color-text-muted)] font-heading uppercase tracking-wider mb-1">{t('gameover.accuracy')}</div>
           <div className="text-2xl font-heading font-bold">{data.stats.accuracy}%</div>
         </div>
       </div>
@@ -110,7 +113,7 @@ export default function GameOverScreen({ data, mode, username, onPlayAgain, onLe
       {mode === 'battle' && data.ranking && data.ranking.length > 0 && (
         <div className="w-full max-w-md">
           <div className="text-xs font-heading uppercase tracking-widest text-[var(--color-text-muted)] mb-3 text-center">
-            Final Ranking
+            {t('gameover.finalRanking')}
           </div>
           <div className="space-y-1">
             {data.ranking.map((p) => {
@@ -129,7 +132,7 @@ export default function GameOverScreen({ data, mode, username, onPlayAgain, onLe
                   <div className="flex items-center gap-3">
                     <span className="font-mono font-bold text-lg w-8" style={{ color: rankColor }}>#{p.rank}</span>
                     <span className="font-heading font-bold" style={{ color: isMe ? '#00ff88' : 'var(--color-text-primary)' }}>
-                      {p.username} {isMe && '(You)'}
+                      {p.username} {isMe && t('gameover.you')}
                     </span>
                   </div>
                   <div className="flex items-center gap-3">
@@ -147,8 +150,8 @@ export default function GameOverScreen({ data, mode, username, onPlayAgain, onLe
 
       {/* Actions */}
       <div className="flex gap-4">
-        <button onClick={onPlayAgain} className="btn-primary">PLAY AGAIN</button>
-        <button onClick={onLeave} className="btn-secondary">BACK TO LOBBY</button>
+        <button onClick={onPlayAgain} className="btn-primary">{t('gameover.playAgain')}</button>
+        <button onClick={onLeave} className="btn-secondary">{t('gameover.backToLobby')}</button>
       </div>
     </div>
   );
