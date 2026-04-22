@@ -26,7 +26,7 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 
 func (r *UserRepository) Create(ctx context.Context, user *model.User) error {
 	start := time.Now()
-	query := `INSERT INTO users (id, username, email, password_hash) 
+	query := `INSERT INTO users (id, username, email, password_hash)
 	          VALUES ($1, $2, $3, $4) RETURNING created_at`
 	user.ID = uuid.New()
 	err := r.db.QueryRowContext(ctx, query,
@@ -45,7 +45,7 @@ func (r *UserRepository) Create(ctx context.Context, user *model.User) error {
 func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*model.User, error) {
 	start := time.Now()
 	user := &model.User{}
-	query := `SELECT id, username, email, password_hash, avg_reaction_ms, total_correct, games_played, best_reaction_ms, created_at 
+	query := `SELECT id, username, email, password_hash, avg_reaction_ms, total_correct, games_played, best_reaction_ms, created_at
 	          FROM users WHERE email = $1`
 	err := r.db.QueryRowContext(ctx, query, email).Scan(
 		&user.ID, &user.Username, &user.Email, &user.PasswordHash,
@@ -66,7 +66,7 @@ func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*model.
 func (r *UserRepository) FindByID(ctx context.Context, id uuid.UUID) (*model.User, error) {
 	start := time.Now()
 	user := &model.User{}
-	query := `SELECT id, username, email, password_hash, avg_reaction_ms, total_correct, games_played, best_reaction_ms, created_at 
+	query := `SELECT id, username, email, password_hash, avg_reaction_ms, total_correct, games_played, best_reaction_ms, created_at
 	          FROM users WHERE id = $1`
 	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&user.ID, &user.Username, &user.Email, &user.PasswordHash,
@@ -86,16 +86,16 @@ func (r *UserRepository) FindByID(ctx context.Context, id uuid.UUID) (*model.Use
 
 func (r *UserRepository) UpdateStats(ctx context.Context, userID uuid.UUID, sessionAvgMs int, correctCount int, bestReactionMs int) error {
 	start := time.Now()
-	query := `UPDATE users SET 
-	          avg_reaction_ms = CASE 
-	            WHEN games_played = 0 THEN $2 
-	            ELSE (avg_reaction_ms * games_played + $2) / (games_played + 1) 
+	query := `UPDATE users SET
+	          avg_reaction_ms = CASE
+	            WHEN games_played = 0 THEN $2
+	            ELSE (avg_reaction_ms * games_played + $2) / (games_played + 1)
 	          END,
 	          total_correct = total_correct + $3,
 	          games_played = games_played + 1,
-	          best_reaction_ms = CASE 
-	            WHEN best_reaction_ms = 0 OR ($4 > 0 AND $4 < best_reaction_ms) THEN $4 
-	            ELSE best_reaction_ms 
+	          best_reaction_ms = CASE
+	            WHEN best_reaction_ms = 0 OR ($4 > 0 AND $4 < best_reaction_ms) THEN $4
+	            ELSE best_reaction_ms
 	          END
 	          WHERE id = $1`
 	_, err := r.db.ExecContext(ctx, query, userID, sessionAvgMs, correctCount, bestReactionMs)
@@ -112,17 +112,11 @@ func (r *UserRepository) UpdateStats(ctx context.Context, userID uuid.UUID, sess
 func (r *UserRepository) GetLeaderboard(ctx context.Context, limit int, offset int) ([]model.LeaderboardEntry, int, error) {
 	start := time.Now()
 
-	// Get total count of eligible users
-	var totalCount int
-	countQuery := `SELECT COUNT(*) FROM users WHERE games_played > 0 AND avg_reaction_ms > 0`
-	if err := r.db.QueryRowContext(ctx, countQuery).Scan(&totalCount); err != nil {
-		duration := time.Since(start)
-		r.log.Error("get leaderboard count failed", "op", "GetLeaderboard", "err", err, "duration_ms", duration.Milliseconds(), r.reqIDAttr(ctx))
-		return nil, 0, err
-	}
-
-	query := `SELECT id, username, avg_reaction_ms, total_correct, games_played, best_reaction_ms 
-	          FROM users WHERE games_played > 0 AND avg_reaction_ms > 0 ORDER BY avg_reaction_ms ASC LIMIT $1 OFFSET $2`
+	// Single query: window function avoids a separate COUNT(*) round-trip.
+	query := `SELECT id, username, avg_reaction_ms, total_correct, games_played, best_reaction_ms,
+	                 COUNT(*) OVER() AS total_count
+	          FROM users WHERE games_played > 0 AND avg_reaction_ms > 0
+	          ORDER BY avg_reaction_ms ASC LIMIT $1 OFFSET $2`
 	rows, err := r.db.QueryContext(ctx, query, limit, offset)
 	if err != nil {
 		duration := time.Since(start)
@@ -131,11 +125,12 @@ func (r *UserRepository) GetLeaderboard(ctx context.Context, limit int, offset i
 	}
 	defer rows.Close()
 
-	var entries = make([]model.LeaderboardEntry, 0)
+	var totalCount int
+	entries := make([]model.LeaderboardEntry, 0)
 	rank := offset + 1
 	for rows.Next() {
 		var e model.LeaderboardEntry
-		if err := rows.Scan(&e.UserID, &e.Username, &e.AvgReactionMs, &e.TotalCorrect, &e.GamesPlayed, &e.BestReactionMs); err != nil {
+		if err := rows.Scan(&e.UserID, &e.Username, &e.AvgReactionMs, &e.TotalCorrect, &e.GamesPlayed, &e.BestReactionMs, &totalCount); err != nil {
 			r.log.Error("scan leaderboard row failed", "op", "GetLeaderboard", "rank", rank, "err", err, r.reqIDAttr(ctx))
 			return nil, 0, err
 		}
