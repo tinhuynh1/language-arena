@@ -531,7 +531,7 @@ func splitProxyKey(key string) []string {
 	return []string{key}
 }
 
-func mustMarshal(v interface{}) json.RawMessage {
+func mustMarshal(v any) json.RawMessage {
 	data, err := json.Marshal(v)
 	if err != nil {
 		return json.RawMessage(`{}`)
@@ -623,11 +623,23 @@ func (h *Hub) handleProxyJoin(msg RedisMessage) {
 	h.proxyClients[proxyUserID+":"+roomCode] = proxy
 	h.mu.Unlock()
 
+	// Find opponent username (any player in the room who isn't the proxy itself)
+	var opponentUsername string
+	room.mu.Lock()
+	for c := range room.Players {
+		if c.ID != proxy.ID {
+			opponentUsername = c.Username
+			break
+		}
+	}
+	room.mu.Unlock()
+
 	// Send match_found via relay
 	proxy.SendMessage(WSMessage{
 		Type: MsgMatchFound,
 		Data: MatchFoundData{
 			RoomID:      room.ID,
+			Opponent:    opponentUsername,
 			PlayerCount: len(room.Players),
 			Mode:        string(room.Mode),
 			IsHost:      proxy.ID == room.HostID,
