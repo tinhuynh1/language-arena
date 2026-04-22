@@ -13,7 +13,6 @@ env:
   REGION: asia-southeast1-a
   REPOSITORY: lingo-sniper
   CLUSTER_NAME: lingo-sniper-cluster
-  # Your Github Repo Name (Example: user/repo)
   GITHUB_REPO: tinhuynh1/language-arena
   
   # === YOU NEED TO REPLACE (UPDATE) THIS VARIABLE AFTER RUNNING WIF SCRIPT ===
