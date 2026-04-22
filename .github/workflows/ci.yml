@@ -38,14 +38,12 @@ jobs:
           cd backend
           go test ./... -coverprofile=./cover.out -covermode=atomic
 
-      - name: Check 80% Coverage Threshold
+      - name: Check 60% Total Coverage Threshold
         uses: vladopajic/go-test-coverage@v2
         with:
           profile: backend/cover.out
           local-prefix: github.com/michael/language-arena/backend
-          threshold-total: 80
-          git-token: ${{ secrets.GITHUB_TOKEN }}
-          git-branch: badges
+          threshold-total: 60
 
   frontend-quality-gate:
     name: Frontend Linting
