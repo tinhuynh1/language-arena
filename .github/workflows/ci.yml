@@ -1,0 +1,79 @@
+name: CI/CD Quality Gate
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  backend-quality-gate:
+    name: Backend Lint, Test & Coverage
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write # Required for reviewdog and coverage comments
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache-dependency-path: backend/go.sum
+
+      - name: Run golangci-lint with ReviewDog
+        uses: reviewdog/action-golangci-lint@v2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          golangci_lint_flags: "--timeout=5m"
+          workdir: "backend"
+          reporter: github-pr-review
+          fail_on_error: true
+
+      - name: Run Unit Tests with Coverage
+        run: |
+          cd backend
+          go test ./... -coverprofile=./cover.out -covermode=atomic
+
+      - name: Check 80% Coverage Threshold
+        uses: vladopajic/go-test-coverage@v2
+        with:
+          profile: backend/cover.out
+          local-prefix: github.com/michael/language-arena/backend
+          threshold-total: 80
+          git-token: ${{ secrets.GITHUB_TOKEN }}
+          git-branch: badges
+
+  frontend-quality-gate:
+    name: Frontend Linting
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write # Required for reviewdog comments
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Run ESLint with ReviewDog
+        uses: reviewdog/action-eslint@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          workdir: "frontend"
+          reporter: github-pr-review
+          eslint_flags: "."
+          fail_on_error: true
