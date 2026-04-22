@@ -130,12 +130,10 @@ func TestUserRepository_GetLeaderboard(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("success", func(t *testing.T) {
-		mock.ExpectQuery("SELECT COUNT").WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
+		rows := sqlmock.NewRows([]string{"id", "username", "avg_reaction_ms", "total_correct", "games_played", "best_reaction_ms", "total_count"}).
+			AddRow(uuid.New(), "top1", 800, 100, 50, 500, 1)
 
-		rows := sqlmock.NewRows([]string{"id", "username", "avg_reaction_ms", "total_correct", "games_played", "best_reaction_ms"}).
-			AddRow(uuid.New(), "top1", 800, 100, 50, 500)
-
-		mock.ExpectQuery("SELECT id, username, avg_reaction").WithArgs(10, 0).WillReturnRows(rows)
+		mock.ExpectQuery("SELECT id, username.*total_count").WithArgs(10, 0).WillReturnRows(rows)
 
 		entries, total, err := repo.GetLeaderboard(ctx, 10, 0)
 		assert.NoError(t, err)
