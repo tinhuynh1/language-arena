@@ -274,6 +274,9 @@ func (h *Hub) handleJoinQueue(client *Client, msg WSMessage) {
 	if data.Level == "" {
 		data.Level = "A1"
 	}
+	if data.QuizType == "" {
+		data.QuizType = string(model.QuizTypeMeaningToWord)
+	}
 
 	if data.Mode == "solo" {
 		vocabs := h.GetVocabs(data.Language, data.Level, maxRounds+numTargets)
@@ -547,6 +550,8 @@ func (h *Hub) HandleRedisMessage(msg RedisMessage) {
 		h.handleRelayWS(msg)
 	case RedisProxyLeft:
 		h.handleProxyLeft(msg)
+	case RedisMatchFound:
+		h.handleRedisMatchFound(msg)
 	default:
 		h.log.Warn("unknown redis message type", "type", msg.Type, "from_node", msg.FromNode)
 	}
@@ -734,6 +739,52 @@ func (h *Hub) handleProxyLeft(msg RedisMessage) {
 	h.mu.Unlock()
 
 	h.log.Info("proxy client removed", "player", msg.Username, "room_code", msg.RoomCode)
+}
+
+// handleRedisMatchFound: a match was found on another instance for a local player.
+// We initiate a proxy join so the player joins the room on the remote node.
+func (h *Hub) handleRedisMatchFound(msg RedisMessage) {
+	targetID, err := uuid.Parse(msg.UserID)
+	if err != nil {
+		h.log.Error("match_found: invalid user_id", "user_id", msg.UserID)
+		return
+	}
+
+	h.mu.RLock()
+	var target *Client
+	for c := range h.Clients {
+		if c.ID == targetID {
+			target = c
+			break
+		}
+	}
+	h.mu.RUnlock()
+
+	if target == nil {
+		h.log.Warn("match_found: local client not found", "user_id", msg.UserID)
+		return
+	}
+
+	h.Matchmaker.removePending(msg.UserID)
+
+	h.mu.Lock()
+	h.proxyClients[target.ID.String()+":"+msg.RoomCode] = target
+	h.mu.Unlock()
+
+	h.Redis.PublishToNode(msg.FromNode, RedisMessage{
+		Type:     RedisProxyJoin,
+		FromNode: h.Redis.NodeID,
+		RoomCode: msg.RoomCode,
+		UserID:   target.ID.String(),
+		Username: target.Username,
+	})
+
+	h.log.Info("proxy join initiated for matched player",
+		"component", "WS",
+		"player", target.Username,
+		"room_code", msg.RoomCode,
+		"target_node", msg.FromNode,
+	)
 }
 
 func (h *Hub) RemoveRoom(room *Room) {
