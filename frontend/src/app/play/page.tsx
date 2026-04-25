@@ -31,28 +31,24 @@ const ZH_LEVELS = [
 /* SVG icons for mode cards */
 function SoloIcon({ color }: { color: string }) {
   return (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" />
-      <circle cx="12" cy="12" r="6" />
-      <circle cx="12" cy="12" r="2" />
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
     </svg>
   );
 }
 
 function DuelIcon({ color }: { color: string }) {
   return (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" />
-      <line x1="8" y1="13" x2="16" y2="13" />
-      <line x1="12" y1="9" x2="12" y2="17" />
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
     </svg>
   );
 }
 
 function BattleIcon({ color }: { color: string }) {
   return (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" /><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" /><path d="M4 22h16" /><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20 7 22" /><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20 17 22" /><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
     </svg>
   );
 }
@@ -79,15 +75,17 @@ export default function PlayPage() {
   const levels = selectedLang === 'en' ? EN_LEVELS : ZH_LEVELS;
 
   const EN_QUIZ_TYPES: { value: QuizType; label: string; desc: string }[] = [
-    { value: 'meaning_to_word', label: 'Meaning → Word', desc: 'See meaning, shoot word' },
-    { value: 'word_to_meaning', label: 'Word → Meaning', desc: 'See word, shoot meaning' },
-    { value: 'word_to_ipa', label: 'Word → IPA', desc: 'See word, shoot IPA' },
+    { value: 'meaning_to_word', label: 'Meaning → Word', desc: 'See meaning, find word' },
+    { value: 'word_to_meaning', label: 'Word → Meaning', desc: 'See word, find meaning' },
+    { value: 'word_to_ipa', label: 'Word → IPA', desc: 'See word, find IPA' },
+    { value: 'definition_to_word', label: 'Definition → Word', desc: 'Read definition, find word' },
   ];
 
   const ZH_QUIZ_TYPES: { value: QuizType; label: string; desc: string }[] = [
-    { value: 'meaning_to_word', label: 'Meaning → Word', desc: 'See meaning, shoot word' },
-    { value: 'word_to_meaning', label: 'Word → Meaning', desc: 'See word, shoot meaning' },
-    { value: 'word_to_pinyin', label: 'Word → Pinyin', desc: 'See word, shoot pinyin' },
+    { value: 'meaning_to_word', label: 'Meaning → Word', desc: 'See meaning, find word' },
+    { value: 'word_to_meaning', label: 'Word → Meaning', desc: 'See word, find meaning' },
+    { value: 'word_to_pinyin', label: 'Word → Pinyin', desc: 'See word, find pinyin' },
+    { value: 'word_to_tone', label: 'Word → Tone', desc: 'See word, pick correct tone' },
   ];
 
   const quizTypes = selectedLang === 'en' ? EN_QUIZ_TYPES : ZH_QUIZ_TYPES;
@@ -134,44 +132,35 @@ export default function PlayPage() {
   };
 
   const MODE_CONFIG = {
-    solo: { color: '#00ff88', glowColor: 'rgba(0,255,136,0.15)', Icon: SoloIcon },
-    duel: { color: '#ff6b35', glowColor: 'rgba(255,107,53,0.15)', Icon: DuelIcon },
-    battle: { color: '#00d4ff', glowColor: 'rgba(0,212,255,0.15)', Icon: BattleIcon },
+    solo: { color: '#4F46E5', Icon: SoloIcon },
+    duel: { color: '#0D9488', Icon: DuelIcon },
+    battle: { color: '#EA580C', Icon: BattleIcon },
   };
 
   // Idle - Mode/Lang/Level Selection
   if (game.state === 'idle') {
     return (
       <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 relative overflow-hidden">
-        {/* Background grid */}
-        <div className="absolute inset-0 opacity-[0.02]" aria-hidden="true" style={{
-          backgroundImage: `linear-gradient(rgba(0,255,136,0.4) 1px, transparent 1px),
-                            linear-gradient(90deg, rgba(0,255,136,0.4) 1px, transparent 1px)`,
-          backgroundSize: '60px 60px',
-        }} />
-
-        {/* Ambient orbs */}
-        <div className="orb w-[400px] h-[400px] opacity-[0.06]"
-             style={{ background: '#00ff88', top: '-10%', left: '-10%' }} />
-        <div className="orb w-[300px] h-[300px] opacity-[0.04]"
-             style={{ background: '#00d4ff', bottom: '-5%', right: '-10%', animationDelay: '-6s' }} />
+        {/* Soft blobs */}
+        <div className="bg-blob w-[350px] h-[350px] opacity-[0.08]"
+             style={{ background: '#4F46E5', top: '-10%', left: '-10%' }} />
+        <div className="bg-blob w-[300px] h-[300px] opacity-[0.06]"
+             style={{ background: '#0D9488', bottom: '-5%', right: '-10%', animationDelay: '-6s' }} />
 
         <div className="w-full max-w-2xl text-center relative z-10">
           {/* Title */}
           <div className="animate-fade-in-up">
-            <h1 className="font-heading font-bold text-3xl sm:text-5xl mb-3 uppercase tracking-wider">
-              {t('play.title').replace('{accent}', '')} <span className="text-gradient-neon text-glow">{t('play.titleAccent')}</span>
+            <h1 className="font-heading font-bold text-3xl sm:text-4xl mb-3 tracking-tight">
+              {t('play.title').replace('{accent}', '')} <span className="text-[var(--color-primary)]">{t('play.titleAccent')}</span>
             </h1>
             <p className="text-[var(--color-text-secondary)] mb-8 sm:mb-10 text-sm sm:text-base">
               {t('play.subtitle')}
             </p>
             {/* Error toast */}
             {game.errorMessage && (
-              <div className="mb-6 px-4 py-3 rounded-sm border border-[var(--color-accent-red)] bg-[rgba(255,53,72,0.08)] text-[var(--color-accent-red)] font-heading text-sm uppercase tracking-wider animate-fade-in-up flex items-center justify-center gap-2">
+              <div className="mb-6 px-4 py-3 rounded-[var(--radius-sm)] border border-red-200 bg-red-50 text-[var(--color-accent-red)] font-heading text-sm animate-fade-in-up flex items-center justify-center gap-2">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="12" y1="8" x2="12" y2="12" />
-                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                  <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
                 </svg>
                 {game.errorMessage}
               </div>
@@ -192,18 +181,14 @@ export default function PlayPage() {
                   }`}
                   style={{
                     borderColor: isSelected ? cfg.color : undefined,
-                    boxShadow: isSelected ? `0 0 24px ${cfg.glowColor}, inset 0 0 20px ${cfg.glowColor}` : undefined,
+                    boxShadow: isSelected ? `0 4px 20px ${cfg.color}20` : undefined,
                     padding: '1.25rem',
                   }}
                 >
-                  {/* Accent bar top */}
-                  {isSelected && (
-                    <div className="absolute top-0 left-0 right-0 h-[2px]" style={{ background: cfg.color, boxShadow: `0 0 10px ${cfg.color}` }} />
-                  )}
                   <div className="mb-3 transition-transform duration-200 group-hover:scale-110" style={{ color: isSelected ? cfg.color : 'var(--color-text-muted)' }}>
                     <cfg.Icon color={isSelected ? cfg.color : 'currentColor'} />
                   </div>
-                  <div className="font-heading font-bold text-base sm:text-lg mb-1 uppercase tracking-wide" style={{ color: isSelected ? cfg.color : 'inherit' }}>
+                  <div className="font-heading font-bold text-base sm:text-lg mb-1" style={{ color: isSelected ? cfg.color : 'inherit' }}>
                     {mode === 'solo' ? t('play.mode.solo') : mode === 'duel' ? t('play.mode.duel') : t('play.mode.battle')}
                   </div>
                   <p className="text-xs sm:text-sm text-[var(--color-text-muted)]">
@@ -226,10 +211,10 @@ export default function PlayPage() {
                   key={lang}
                   onClick={() => handleLangChange(lang)}
                   className={`card text-center transition-all duration-200 cursor-pointer py-5 ${
-                    isSelected ? 'border-2 border-[var(--color-accent-cyan)]' : 'hover:border-[var(--color-text-muted)]'
+                    isSelected ? 'border-2 border-[var(--color-secondary)]' : 'hover:border-[var(--color-text-muted)]'
                   }`}
                   style={{
-                    boxShadow: isSelected ? '0 0 24px rgba(0,212,255,0.15), inset 0 0 20px rgba(0,212,255,0.08)' : undefined,
+                    boxShadow: isSelected ? '0 4px 20px rgba(13,148,136,0.12)' : undefined,
                   }}
                 >
                   <div className="mb-2 flex justify-center">
@@ -238,10 +223,10 @@ export default function PlayPage() {
                       alt={label}
                       width={48}
                       height={32}
-                      style={{ borderRadius: 4, objectFit: 'cover' }}
+                      style={{ borderRadius: 6, objectFit: 'cover' }}
                     />
                   </div>
-                  <div className="font-heading font-bold uppercase text-sm sm:text-base tracking-wide" style={{ color: isSelected ? '#00d4ff' : 'inherit' }}>
+                  <div className="font-heading font-bold text-sm sm:text-base" style={{ color: isSelected ? 'var(--color-secondary)' : 'inherit' }}>
                     {label}
                   </div>
                 </button>
@@ -251,7 +236,7 @@ export default function PlayPage() {
 
           {/* Level Selection */}
           <div className="mb-6 sm:mb-8 animate-fade-in-up delay-300">
-            <div className="text-xs sm:text-sm font-heading uppercase tracking-widest text-[var(--color-text-muted)] mb-3">
+            <div className="text-sm font-heading font-medium text-[var(--color-text-muted)] mb-3">
               {t('play.level.label')}
             </div>
             <div className="flex gap-2 sm:gap-3 justify-center flex-wrap">
@@ -259,13 +244,12 @@ export default function PlayPage() {
                 <button
                   key={l.value}
                   onClick={() => setSelectedLevel(l.value)}
-                  className={`px-4 sm:px-5 py-2.5 sm:py-3 font-heading font-bold text-sm sm:text-base uppercase transition-all duration-200 border cursor-pointer ${selectedLevel === l.value
-                      ? 'border-[var(--color-accent-neon)] text-[var(--color-accent-neon)] bg-[rgba(0,255,136,0.1)]'
+                  className={`px-4 sm:px-5 py-2.5 sm:py-3 font-heading font-bold text-sm sm:text-base transition-all duration-200 border cursor-pointer rounded-[var(--radius-sm)] ${selectedLevel === l.value
+                      ? 'border-[var(--color-primary)] text-[var(--color-primary)] bg-[rgba(79,70,229,0.06)]'
                       : 'border-[var(--color-border-default)] text-[var(--color-text-secondary)] hover:border-[var(--color-text-muted)]'
                     }`}
                   style={{
-                    borderRadius: '3px',
-                    boxShadow: selectedLevel === l.value ? '0 0 12px rgba(0,255,136,0.15)' : undefined,
+                    boxShadow: selectedLevel === l.value ? '0 2px 8px rgba(79,70,229,0.12)' : undefined,
                   }}
                 >
                   <div>{l.label}</div>
@@ -277,7 +261,7 @@ export default function PlayPage() {
 
           {/* Quiz Type Selection */}
           <div className="mb-8 sm:mb-10 animate-fade-in-up delay-400">
-            <div className="text-xs sm:text-sm font-heading uppercase tracking-widest text-[var(--color-text-muted)] mb-3">
+            <div className="text-sm font-heading font-medium text-[var(--color-text-muted)] mb-3">
               {t('play.quiz.label')}
             </div>
             <div className="grid grid-cols-3 gap-2 sm:gap-3">
@@ -287,13 +271,12 @@ export default function PlayPage() {
                   <button
                     key={q.value}
                     onClick={() => setSelectedQuizType(q.value)}
-                    className={`px-3 sm:px-4 py-3 font-heading font-bold text-sm uppercase transition-all duration-200 border text-left cursor-pointer ${isSelected
-                        ? 'border-[var(--color-accent-orange)] text-[var(--color-accent-orange)] bg-[rgba(255,107,53,0.12)]'
+                    className={`px-3 sm:px-4 py-3 font-heading font-bold text-sm transition-all duration-200 border text-left cursor-pointer rounded-[var(--radius-sm)] ${isSelected
+                        ? 'border-[var(--color-secondary)] text-[var(--color-secondary)] bg-[rgba(13,148,136,0.06)]'
                         : 'border-[var(--color-border-default)] text-[var(--color-text-secondary)] hover:border-[var(--color-text-muted)]'
                       }`}
                     style={{
-                      borderRadius: '3px',
-                      boxShadow: isSelected ? '0 0 12px rgba(255,107,53,0.15)' : undefined,
+                      boxShadow: isSelected ? '0 2px 8px rgba(13,148,136,0.12)' : undefined,
                     }}
                   >
                     <div>{q.label}</div>
@@ -306,7 +289,7 @@ export default function PlayPage() {
 
           {/* Action Buttons */}
           <div className="space-y-4 animate-fade-in-up delay-400">
-            <button onClick={handleStart} className="btn-primary text-base sm:text-lg px-10 sm:px-14 py-4 sm:py-5 w-full max-w-sm mx-auto block">
+            <button onClick={handleStart} className="btn-primary text-base sm:text-lg px-10 sm:px-14 py-4 sm:py-5 w-full max-w-sm mx-auto block cursor-pointer">
               {selectedMode === 'battle' ? t('play.btn.createRoom') : selectedMode === 'duel' ? t('play.btn.findOpponent') : t('play.btn.startTraining')}
             </button>
 
@@ -315,7 +298,7 @@ export default function PlayPage() {
                 {!showJoinInput ? (
                   <button
                     onClick={() => setShowJoinInput(true)}
-                    className="btn-secondary text-sm px-8 py-3"
+                    className="btn-secondary text-sm px-8 py-3 cursor-pointer"
                   >
                     {t('play.btn.joinWithCode')}
                   </button>
@@ -331,7 +314,7 @@ export default function PlayPage() {
                       onKeyDown={e => e.key === 'Enter' && handleJoinByCode()}
                       autoFocus
                     />
-                    <button onClick={handleJoinByCode} className="btn-primary py-3 px-4">
+                    <button onClick={handleJoinByCode} className="btn-primary py-3 px-4 cursor-pointer">
                       {t('play.btn.join')}
                     </button>
                   </div>
@@ -351,8 +334,8 @@ export default function PlayPage() {
         <div className="text-center">
           {!game.connected ? (
             <>
-              <div className="w-20 h-20 border-2 border-[var(--color-accent-orange)] border-t-transparent rounded-full animate-spin mx-auto mb-6" />
-              <div className="font-heading font-bold text-2xl sm:text-3xl mb-2 uppercase" style={{ color: '#ff6b35' }}>
+              <div className="w-16 h-16 border-2 border-[var(--color-accent-orange)] border-t-transparent rounded-full animate-spin mx-auto mb-6" />
+              <div className="font-heading font-bold text-2xl sm:text-3xl mb-2" style={{ color: '#EA580C' }}>
                 {t('play.queuing.connecting')}
               </div>
               <p className="text-sm text-[var(--color-text-muted)]">
@@ -361,8 +344,8 @@ export default function PlayPage() {
             </>
           ) : (
             <>
-              <div className="w-20 h-20 border-2 border-[var(--color-accent-neon)] border-t-transparent rounded-full animate-spin mx-auto mb-6" />
-              <div className="font-heading font-bold text-2xl sm:text-3xl mb-2 uppercase text-glow">
+              <div className="w-16 h-16 border-2 border-[var(--color-primary)] border-t-transparent rounded-full animate-spin mx-auto mb-6" />
+              <div className="font-heading font-bold text-2xl sm:text-3xl mb-2 text-[var(--color-primary)]">
                 {selectedMode === 'duel' ? t('play.queuing.findingOpponent') : selectedMode === 'battle' ? t('play.queuing.creatingRoom') : t('play.queuing.preparingArena')}
               </div>
               <p className="text-sm text-[var(--color-text-muted)]">
@@ -370,7 +353,7 @@ export default function PlayPage() {
               </p>
             </>
           )}
-          <button onClick={handleLeave} className="btn-secondary mt-8 text-sm">{t('play.queuing.cancel')}</button>
+          <button onClick={handleLeave} className="btn-secondary mt-8 text-sm cursor-pointer">{t('play.queuing.cancel')}</button>
         </div>
       </div>
     );
@@ -381,40 +364,25 @@ export default function PlayPage() {
     const amIHost = game.isHost || game.hostUsername === user.username;
     return (
       <div className="min-h-screen flex items-center justify-center px-4 sm:px-6 relative overflow-hidden">
-        {/* Background grid */}
-        <div className="absolute inset-0 opacity-[0.02]" aria-hidden="true" style={{
-          backgroundImage: `linear-gradient(rgba(0,212,255,0.4) 1px, transparent 1px),
-                            linear-gradient(90deg, rgba(0,212,255,0.4) 1px, transparent 1px)`,
-          backgroundSize: '60px 60px',
-        }} />
-
-        {/* Ambient orbs */}
-        <div className="orb w-[400px] h-[400px] opacity-[0.06]"
-             style={{ background: '#00d4ff', top: '-10%', right: '-10%' }} />
-        <div className="orb w-[300px] h-[300px] opacity-[0.04]"
-             style={{ background: '#00ff88', bottom: '-5%', left: '-10%', animationDelay: '-6s' }} />
+        <div className="bg-blob w-[350px] h-[350px] opacity-[0.08]"
+             style={{ background: '#0D9488', top: '-10%', right: '-10%' }} />
 
         <div className="w-full max-w-lg text-center relative z-10">
           {/* Title */}
           <div className="motion-safe:animate-fade-in-up mb-6">
-            <h1 className="font-heading font-bold text-3xl sm:text-4xl mb-1 uppercase tracking-wider">
-              {t('play.lobby.title').replace('{accent}', '')} <span className="text-glow-cyan" style={{ color: '#00d4ff' }}>{t('play.lobby.titleAccent')}</span>
+            <h1 className="font-heading font-bold text-3xl sm:text-4xl mb-1 tracking-tight">
+              {t('play.lobby.title').replace('{accent}', '')} <span className="text-[var(--color-secondary)]">{t('play.lobby.titleAccent')}</span>
             </h1>
             <p className="text-sm text-[var(--color-text-muted)]">{t('play.lobby.subtitle')}</p>
           </div>
 
           {/* Room Code Card */}
-          <div className="mb-6 px-6 py-5 rounded-sm motion-safe:animate-fade-in-up delay-100" style={{
-            background: 'rgba(0, 212, 255, 0.04)',
-            border: '1px solid rgba(0, 212, 255, 0.15)',
-            backdropFilter: 'blur(8px)',
-          }}>
-            <div className="text-xs font-heading uppercase tracking-[0.25em] text-[var(--color-text-muted)] mb-2">
+          <div className="card mb-6 motion-safe:animate-fade-in-up delay-100">
+            <div className="text-xs font-heading font-medium text-[var(--color-text-muted)] mb-2">
               {t('play.lobby.shareCode')}
             </div>
             <button
-              className="w-full font-mono font-bold text-4xl sm:text-5xl tracking-[0.3em] text-glow cursor-pointer transition-all hover:scale-[1.02] focus-visible:ring-2 focus-visible:ring-[#00ff88] focus-visible:outline-none rounded-sm bg-transparent border-none p-0"
-              style={{ color: '#00ff88' }}
+              className="w-full font-mono font-bold text-4xl sm:text-5xl tracking-[0.3em] text-[var(--color-primary)] cursor-pointer transition-all hover:scale-[1.02] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:outline-none bg-transparent border-none p-0"
               onClick={() => navigator.clipboard?.writeText(game.roomCode)}
               title="Click to copy room code"
               aria-label={`Room code: ${game.roomCode}. Click to copy.`}
@@ -425,15 +393,12 @@ export default function PlayPage() {
           </div>
 
           {/* Player List */}
-          <div className="mb-6 px-5 py-4 rounded-sm motion-safe:animate-fade-in-up delay-200" style={{
-            background: 'rgba(255,255,255,0.02)',
-            border: '1px solid rgba(255,255,255,0.06)',
-          }}>
+          <div className="card mb-6 motion-safe:animate-fade-in-up delay-200">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-heading uppercase tracking-wider text-[var(--color-text-muted)]">
+              <span className="text-xs font-heading font-medium text-[var(--color-text-muted)]">
                 {t('play.lobby.players')}
               </span>
-              <span className="font-mono font-bold text-sm" style={{ color: '#00ff88' }}>
+              <span className="font-mono font-bold text-sm text-[var(--color-primary)]">
                 {game.playerCount}
               </span>
             </div>
@@ -441,38 +406,35 @@ export default function PlayPage() {
               {game.players.map(name => {
                 const isPlayerHost = name === game.hostUsername;
                 return (
-                  <div key={name} className="flex items-center gap-3 px-3 py-2.5 rounded-sm transition-all" style={{
-                    background: isPlayerHost ? 'rgba(0, 212, 255, 0.06)' : 'rgba(255,255,255,0.02)',
-                    border: `1px solid ${isPlayerHost ? 'rgba(0, 212, 255, 0.2)' : 'rgba(255,255,255,0.05)'}`,
+                  <div key={name} className="flex items-center gap-3 px-3 py-2.5 rounded-[var(--radius-sm)] transition-all" style={{
+                    background: isPlayerHost ? 'rgba(13,148,136,0.06)' : 'var(--color-bg-secondary)',
+                    border: `1px solid ${isPlayerHost ? 'rgba(13,148,136,0.2)' : 'var(--color-border-default)'}`,
                   }}>
-                    {/* Avatar circle */}
                     <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold font-heading shrink-0" style={{
-                      background: isPlayerHost ? 'rgba(0, 212, 255, 0.15)' : 'rgba(0, 255, 136, 0.1)',
-                      color: isPlayerHost ? '#00d4ff' : '#00ff88',
-                      border: `1px solid ${isPlayerHost ? 'rgba(0,212,255,0.3)' : 'rgba(0,255,136,0.2)'}`,
+                      background: isPlayerHost ? 'rgba(13,148,136,0.1)' : 'rgba(79,70,229,0.08)',
+                      color: isPlayerHost ? 'var(--color-secondary)' : 'var(--color-primary)',
                     }}>
                       {name[0]?.toUpperCase()}
                     </div>
                     <span className="font-heading text-sm font-bold flex-1 text-left" style={{
-                      color: isPlayerHost ? '#00d4ff' : 'var(--color-text-primary)',
+                      color: isPlayerHost ? 'var(--color-secondary)' : 'var(--color-text-primary)',
                     }}>
                       {name}
                     </span>
-                    {/* Host badge */}
                     {isPlayerHost && (
-                      <span className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-heading uppercase tracking-wider rounded-sm" style={{
-                        background: 'rgba(0, 212, 255, 0.1)',
-                        color: '#00d4ff',
-                        border: '1px solid rgba(0, 212, 255, 0.2)',
+                      <span className="flex items-center gap-1 px-2 py-0.5 text-[10px] font-heading font-medium rounded-full" style={{
+                        background: 'rgba(13,148,136,0.1)',
+                        color: 'var(--color-secondary)',
+                        border: '1px solid rgba(13,148,136,0.2)',
                       }}>
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="#00d4ff" stroke="none">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="none">
                           <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
                         </svg>
                         {t('play.lobby.host')}
                       </span>
                     )}
                     {name === user.username && !isPlayerHost && (
-                      <span className="text-[10px] font-heading uppercase tracking-wider text-[var(--color-text-muted)] opacity-50">
+                      <span className="text-[10px] font-heading text-[var(--color-text-muted)] opacity-50">
                         {t('play.lobby.you')}
                       </span>
                     )}
@@ -495,12 +457,11 @@ export default function PlayPage() {
             ) : (
               <button
                 disabled
-                className="text-base px-10 py-3.5 font-heading font-bold uppercase tracking-wider border-2 cursor-not-allowed opacity-60"
+                className="text-base px-10 py-3.5 font-heading font-bold border-2 cursor-not-allowed opacity-60 rounded-[var(--radius-sm)]"
                 style={{
-                  borderColor: 'rgba(0,212,255,0.2)',
-                  color: '#00d4ff',
-                  background: 'rgba(0,212,255,0.05)',
-                  borderRadius: '3px',
+                  borderColor: 'rgba(13,148,136,0.2)',
+                  color: 'var(--color-secondary)',
+                  background: 'rgba(13,148,136,0.05)',
                 }}
               >
                 {t('play.lobby.waitingHost')}
@@ -520,12 +481,12 @@ export default function PlayPage() {
     return (
       <div className="min-h-screen flex items-center justify-center px-6">
         <div className="text-center">
-          <div className="font-heading font-bold text-3xl sm:text-4xl mb-2 uppercase text-glow" style={{ color: '#00ff88' }}>
+          <div className="font-heading font-bold text-3xl sm:text-4xl mb-2 text-[var(--color-primary)]">
             {game.mode === 'duel' ? t('play.matched.matchFound') : game.mode === 'battle' ? t('play.matched.gameStarting') : t('play.matched.arenaReady')}
           </div>
           {game.mode === 'duel' && game.opponent && (
             <div className="text-lg text-[var(--color-text-secondary)] mb-6">
-              vs <span className="font-bold" style={{ color: '#ff6b35' }}>{game.opponent}</span>
+              vs <span className="font-bold text-[var(--color-secondary)]">{game.opponent}</span>
             </div>
           )}
           {game.mode === 'battle' && (
@@ -536,11 +497,10 @@ export default function PlayPage() {
           <button
             onClick={handleReady}
             disabled={readySent}
-            className={`text-lg px-12 py-4 font-heading font-bold uppercase tracking-wider border-2 transition-all cursor-pointer ${readySent
-                ? 'border-[var(--color-accent-neon)] text-[var(--color-accent-neon)] bg-[rgba(0,255,136,0.1)] opacity-80 cursor-not-allowed'
+            className={`text-lg px-12 py-4 font-heading font-bold border-2 transition-all cursor-pointer rounded-[var(--radius-sm)] ${readySent
+                ? 'border-[var(--color-primary)] text-[var(--color-primary)] bg-[rgba(79,70,229,0.06)] opacity-80 cursor-not-allowed'
                 : 'btn-primary'
               }`}
-            style={{ borderRadius: '3px' }}
           >
             {readySent ? t('play.matched.waiting') : t('play.matched.ready')}
           </button>
@@ -562,7 +522,7 @@ export default function PlayPage() {
   // Playing
   if (game.state === 'playing' || game.state === 'round_end') {
     return (
-      <div className="h-[calc(100vh-4.5rem)] relative" style={{ background: 'var(--color-bg-primary)' }}>
+      <div className="h-[calc(100vh-4.5rem)] relative bg-[var(--color-bg-primary)]">
         <GameCanvas
           targets={game.targets}
           question={game.question}
@@ -589,7 +549,7 @@ export default function PlayPage() {
   // Game Over
   if (game.state === 'game_over') {
     return (
-      <div className="min-h-screen" style={{ background: 'var(--color-bg-primary)' }}>
+      <div className="min-h-screen bg-[var(--color-bg-primary)]">
         <GameOverScreen
           data={game.gameOverData}
           mode={game.mode}

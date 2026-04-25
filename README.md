@@ -779,13 +779,6 @@ language-arena/
 | `LOG_FORMAT` | `json` | `json` (production) or `text` (development) |
 | `GIN_MODE` | `debug` | `debug` or `release` |
 
-## Documentation
-
-| Document | Description |
-|----------|-------------|
-| [BACKEND_TECHNICAL_VI.md](docs/BACKEND_TECHNICAL_VI.md) | Detailed backend technical documentation (Vietnamese) |
-| [INTERVIEW_QUESTIONS_VI.md](docs/INTERVIEW_QUESTIONS_VI.md) | Interview preparation Q&A (Vietnamese) |
-
 ## License
 
 MIT

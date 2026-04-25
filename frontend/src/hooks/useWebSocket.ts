@@ -18,7 +18,9 @@ export type QuizType =
   | 'meaning_to_word'
   | 'word_to_meaning'
   | 'word_to_ipa'
-  | 'word_to_pinyin';
+  | 'word_to_pinyin'
+  | 'word_to_tone'
+  | 'definition_to_word';
 
 export interface Target {
   id: string;

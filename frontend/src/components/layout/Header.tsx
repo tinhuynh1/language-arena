@@ -5,6 +5,16 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useLocale } from '@/i18n/LocaleProvider';
 
+function LogoIcon() {
+  return (
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect width="32" height="32" rx="8" fill="#4F46E5" />
+      <path d="M8 22V10h2.5v10H22v2H8z" fill="#fff" />
+      <path d="M13 18V10h2.5v8h6.5v2.5H13z" fill="rgba(255,255,255,0.7)" />
+    </svg>
+  );
+}
+
 export default function Header() {
   const { user, logout, loading } = useAuth();
   const { locale, setLocale, t } = useLocale();
@@ -21,23 +31,17 @@ export default function Header() {
     <header
       className="fixed top-0 left-0 right-0 z-50"
       style={{
-        background: 'rgba(8, 12, 20, 0.9)',
+        background: 'rgba(250, 251, 254, 0.92)',
         backdropFilter: 'blur(16px)',
-        borderBottom: '1px solid rgba(0, 255, 136, 0.08)',
+        borderBottom: '1px solid var(--color-border-default)',
       }}
     >
       <div className="max-w-7xl mx-auto px-5 sm:px-8 flex items-center justify-between" style={{ height: '4.5rem' }}>
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-3 group" aria-label="Lingo Sniper home">
-          <div
-            className="w-10 h-10 flex items-center justify-center border-2 border-[var(--color-accent-neon)] text-[var(--color-accent-neon)] font-heading font-bold text-sm transition-all duration-200 group-hover:bg-[rgba(0,255,136,0.1)] group-hover:shadow-[0_0_16px_rgba(0,255,136,0.4)]"
-            style={{ borderRadius: '3px' }}
-            aria-hidden="true"
-          >
-            LS
-          </div>
-          <span className="font-heading font-bold text-xl tracking-widest text-[var(--color-text-primary)] group-hover:text-[var(--color-accent-neon)] transition-colors duration-200">
-            LINGO SNIPER
+        <Link href="/" className="flex items-center gap-2.5 group" aria-label="LinguaLeap home">
+          <LogoIcon />
+          <span className="font-heading font-bold text-xl tracking-tight text-[var(--color-text-primary)] group-hover:text-[var(--color-primary)] transition-colors duration-200">
+            LinguaLeap
           </span>
         </Link>
 
@@ -47,20 +51,16 @@ export default function Header() {
             <Link
               key={href}
               href={href}
-              className="relative px-4 py-2 text-sm font-heading uppercase tracking-widest transition-colors duration-150"
-              style={{ color: isActive(href) ? '#00ff88' : undefined }}
+              className="relative px-4 py-2 text-sm font-heading font-medium transition-colors duration-150"
               aria-current={isActive(href) ? 'page' : undefined}
             >
-              <span className={isActive(href) ? 'text-[var(--color-accent-neon)] text-glow' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}>
+              <span className={isActive(href) ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}>
                 {label}
               </span>
               {isActive(href) && (
                 <span
-                  className="absolute bottom-0 left-4 right-4 h-[2px]"
-                  style={{
-                    background: 'var(--color-accent-neon)',
-                    boxShadow: '0 0 8px rgba(0, 255, 136, 0.5)',
-                  }}
+                  className="absolute bottom-0 left-4 right-4 h-[2px] rounded-full"
+                  style={{ background: 'var(--color-primary)' }}
                   aria-hidden="true"
                 />
               )}
@@ -92,17 +92,16 @@ export default function Header() {
               <div className="flex items-center gap-1 ml-3 pl-3 border-l border-[var(--color-border-default)]">
                 <Link
                   href="/dashboard"
-                  className="px-4 py-2 text-sm font-heading uppercase tracking-widest transition-colors duration-150"
-                  style={{ color: isActive('/dashboard') ? '#00ff88' : undefined }}
+                  className="px-4 py-2 text-sm font-heading font-medium transition-colors duration-150"
                   aria-current={isActive('/dashboard') ? 'page' : undefined}
                 >
-                  <span className={isActive('/dashboard') ? 'text-[var(--color-accent-neon)] text-glow' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}>
+                  <span className={isActive('/dashboard') ? 'text-[var(--color-primary)]' : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'}>
                     {user.username}
                   </span>
                 </Link>
                 <button
                   onClick={logout}
-                  className="px-3 py-2 text-sm font-heading uppercase tracking-widest text-[var(--color-text-muted)] hover:text-[var(--color-accent-red)] transition-colors duration-150 cursor-pointer"
+                  className="px-3 py-2 text-sm font-heading font-medium text-[var(--color-text-muted)] hover:text-[var(--color-accent-red)] transition-colors duration-150 cursor-pointer"
                   aria-label="Log out"
                 >
                   {t('nav.logout')}

@@ -7,4 +7,6 @@ const (
 	QuizTypeWordToMeaning QuizType = "word_to_meaning"
 	QuizTypeWordToIPA     QuizType = "word_to_ipa"
 	QuizTypeWordToPinyin  QuizType = "word_to_pinyin"
+	QuizTypeWordToTone        QuizType = "word_to_tone"
+	QuizTypeDefinitionToWord  QuizType = "definition_to_word"
 )

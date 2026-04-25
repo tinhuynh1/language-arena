@@ -5,9 +5,9 @@ import Header from "@/components/layout/Header";
 import "@/styles/globals.css";
 
 export const metadata: Metadata = {
-  title: "Lingo Sniper — Train Your Reflexes, Master Languages",
-  description: "A real-time multiplayer vocabulary aim trainer. Combine CSGO-style reflex training with foreign language learning. Challenge friends in 1v1 duels!",
-  keywords: ["vocabulary", "aim trainer", "language learning", "multiplayer", "csgo", "reflex"],
+  title: "LinguaLeap — Master Vocabulary, One Word at a Time",
+  description: "An interactive vocabulary learning platform. Practice English and Chinese words through engaging quiz sessions. Study solo or challenge friends in real-time.",
+  keywords: ["vocabulary", "language learning", "education", "study", "quiz", "English", "Chinese", "HSK", "CEFR"],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -17,7 +17,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="google" content="notranslate" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Orbitron:wght@500;600;700;800;900&family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
       </head>
       <body>
         <AuthProvider>

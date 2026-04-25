@@ -4,17 +4,16 @@ import { useEffect, useState, useCallback } from 'react';
 import { api, type LeaderboardEntry, type LeaderboardResponse } from '@/lib/api';
 import { useLocale } from '@/i18n/LocaleProvider';
 
-const MEDAL_COLORS = ['#ffd700', '#c0c0c0', '#cd7f32'];
-const MEDAL_GLOW = ['rgba(255,215,0,0.5)', 'rgba(192,192,192,0.5)', 'rgba(205,127,50,0.5)'];
-const MEDAL_BG = ['rgba(255,215,0,0.05)', 'rgba(192,192,192,0.05)', 'rgba(205,127,50,0.05)'];
+const MEDAL_COLORS = ['#F59E0B', '#94A3B8', '#EA580C'];
+const MEDAL_BG = ['rgba(245,158,11,0.08)', 'rgba(148,163,184,0.08)', 'rgba(234,88,12,0.08)'];
 const MEDAL_LABELS = ['Gold', 'Silver', 'Bronze'];
 const PER_PAGE = 10;
 
 function reactionColor(ms: number) {
   if (ms <= 0) return 'var(--color-text-muted)';
-  if (ms < 500) return '#00ff88';
-  if (ms < 1000) return '#ffd700';
-  return '#ff3548';
+  if (ms < 500) return 'var(--color-secondary)';
+  if (ms < 1000) return 'var(--color-accent-gold)';
+  return 'var(--color-accent-red)';
 }
 
 function formatMs(ms: number) {
@@ -24,7 +23,7 @@ function formatMs(ms: number) {
 
 function SkeletonRow() {
   return (
-    <div className="grid grid-cols-12 gap-2 px-5 py-4 border border-[var(--color-border-default)] rounded-sm bg-[rgba(255,255,255,0.02)]">
+    <div className="grid grid-cols-12 gap-2 px-5 py-4 border border-[var(--color-border-default)] rounded-[var(--radius-sm)] bg-[var(--color-bg-card)]">
       <div className="col-span-1 skeleton h-4 opacity-50" />
       <div className="col-span-4 skeleton h-4 opacity-50" />
       <div className="col-span-3 skeleton h-4 opacity-50" />
@@ -64,39 +63,20 @@ export default function LeaderboardPage() {
 
   return (
     <div className="relative min-h-screen px-4 sm:px-6 py-12 overflow-hidden">
-      {/* Background grid */}
-      <div className="absolute inset-0 opacity-[0.03]" aria-hidden="true" style={{
-        backgroundImage: `linear-gradient(rgba(0,212,255,0.4) 1px, transparent 1px),
-                          linear-gradient(90deg, rgba(0,212,255,0.4) 1px, transparent 1px)`,
-        backgroundSize: '60px 60px',
-      }} />
-
-      {/* Ambient orbs */}
-      <div className="orb w-[500px] h-[500px] opacity-[0.05] motion-safe:animate-float"
-           style={{ background: '#ffd700', top: '-10%', right: '-10%' }} />
-      <div className="orb w-[400px] h-[400px] opacity-[0.03] motion-safe:animate-float"
-           style={{ background: '#00d4ff', bottom: '-5%', left: '-10%', animationDelay: '-4s' }} />
-
-      {/* Scanline overlay */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden z-[2]" style={{ opacity: 0.015 }}>
-        <div className="motion-safe:animate-[scanline_10s_linear_infinite]" style={{
-          width: '100%',
-          height: '200%',
-          backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,255,136,0.4) 2px, rgba(0,255,136,0.4) 4px)'
-        }} />
-      </div>
+      {/* Soft blobs */}
+      <div className="bg-blob w-[400px] h-[400px] opacity-[0.08]"
+           style={{ background: '#F59E0B', top: '-10%', right: '-10%' }} />
+      <div className="bg-blob w-[350px] h-[350px] opacity-[0.06]"
+           style={{ background: '#4F46E5', bottom: '-5%', left: '-10%', animationDelay: '-4s' }} />
 
       <div className="relative z-10 max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-14 motion-safe:animate-fade-in-up">
-          <div className="inline-block px-3 py-1 mb-4 text-[10px] font-heading uppercase tracking-[0.3em] rounded-sm"
-               style={{ background: 'rgba(0,212,255,0.1)', color: '#00d4ff', border: '1px solid rgba(0,212,255,0.2)' }}>
-            {t('leaderboard.badge')}
-          </div>
-          <h1 className="font-heading font-bold text-4xl sm:text-5xl lg:text-6xl uppercase tracking-wider mb-2">
-            {t('leaderboard.title').replace('{accent}', '')}<span className="text-glow-cyan" style={{ color: '#00d4ff' }}>{t('leaderboard.titleAccent')}</span>
+          <div className="badge mb-4">{t('leaderboard.badge')}</div>
+          <h1 className="font-heading font-bold text-4xl sm:text-5xl lg:text-6xl tracking-tight mb-2">
+            {t('leaderboard.title').replace('{accent}', '')}<span className="text-[var(--color-primary)]">{t('leaderboard.titleAccent')}</span>
           </h1>
-          <p className="text-sm font-heading tracking-widest text-[var(--color-text-muted)] mt-4">
+          <p className="text-sm font-heading text-[var(--color-text-muted)] mt-4">
             {t('leaderboard.subtitle')}
           </p>
         </div>
@@ -106,16 +86,18 @@ export default function LeaderboardPage() {
             {Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} />)}
           </div>
         ) : entries.length === 0 ? (
-          <div className="text-center py-24 text-[var(--color-text-muted)] relative z-10 card" style={{ background: 'rgba(255,255,255,0.01)' }}>
-            <div className="text-5xl mb-4 opacity-50" aria-hidden="true">◎</div>
-            <p className="font-heading text-xl uppercase tracking-wider mb-2" style={{ color: '#00d4ff' }}>{t('leaderboard.empty.title')}</p>
+          <div className="text-center py-24 text-[var(--color-text-muted)] relative z-10 card">
+            <div className="text-5xl mb-4 opacity-30" aria-hidden="true">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="mx-auto" strokeLinecap="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" /><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" /><path d="M4 22h16" /><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" /></svg>
+            </div>
+            <p className="font-heading text-xl tracking-tight mb-2 text-[var(--color-primary)]">{t('leaderboard.empty.title')}</p>
             <p className="text-sm text-[var(--color-text-secondary)]">{t('leaderboard.empty.desc')}</p>
           </div>
         ) : (
           <div className="relative z-10">
             {/* Podium — top 3 (only on first page) */}
             {top3.length > 0 && (
-              <div className="grid grid-cols-3 gap-3 sm:gap-6 mb-12 motion-safe:animate-fade-in-up delay-100 items-end px-2 sm:px-10" aria-label="Top 3 players">
+              <div className="grid grid-cols-3 gap-3 sm:gap-6 mb-12 motion-safe:animate-fade-in-up delay-100 items-end px-2 sm:px-10" aria-label="Top 3 learners">
                 {[
                   top3[1] ?? null,
                   top3[0] ?? null,
@@ -124,54 +106,45 @@ export default function LeaderboardPage() {
                   if (!entry) return <div key={slot} />;
                   const idx = (entry.rank - 1) as 0 | 1 | 2;
                   const color = MEDAL_COLORS[idx] ?? '#888';
-                  const glow = MEDAL_GLOW[idx] ?? 'rgba(136,136,136,0.5)';
                   const bg = MEDAL_BG[idx] ?? 'transparent';
                   
                   const heights = ['h-28', 'h-40', 'h-24'];
                   const orderHeight = slot === 1 ? heights[1] : slot === 0 ? heights[0] : heights[2];
                   
                   return (
-                    <div key={entry.user_id} className="flex flex-col items-center gap-4 transition-transform duration-300 hover:-translate-y-2">
+                    <div key={entry.user_id} className="flex flex-col items-center gap-4 transition-transform duration-300 hover:-translate-y-1">
                       <div className="flex flex-col items-center text-center">
                         <div className="relative mb-3">
-                          <div className="w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center border-2 font-heading font-bold text-2xl relative z-10"
+                          <div className="w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center border-2 font-heading font-bold text-2xl relative z-10 rounded-full"
                                style={{ 
                                  borderColor: color, 
-                                 color: '#fff',
-                                 background: `linear-gradient(135deg, ${bg}, rgba(0,0,0,0.8))`,
-                                 boxShadow: `0 0 20px ${glow}`,
-                                 borderRadius: '2px' 
+                                 color: color,
+                                 background: bg,
                                }}>
                             {entry.username[0]?.toUpperCase()}
                           </div>
-                          <div className="absolute -bottom-2 -right-2 w-6 h-6 flex items-center justify-center font-heading font-bold text-xs z-20"
-                               style={{ background: color, color: '#000', borderRadius: '50%', boxShadow: `0 0 10px ${color}` }}>
+                          <div className="absolute -bottom-2 -right-2 w-6 h-6 flex items-center justify-center font-heading font-bold text-xs z-20 rounded-full"
+                               style={{ background: color, color: '#fff' }}>
                             {entry.rank}
                           </div>
                         </div>
-                        <div className="font-heading font-bold text-base uppercase tracking-wider truncate w-full px-1" style={{ color, textShadow: `0 0 10px ${glow}` }}>
+                        <div className="font-heading font-bold text-base tracking-tight truncate w-full px-1" style={{ color }}>
                           {entry.username}
                         </div>
-                        <div className="font-mono font-bold text-sm mt-1" style={{ color: reactionColor(entry.avg_reaction_ms), textShadow: `0 0 10px ${reactionColor(entry.avg_reaction_ms)}33` }}>
-                          {formatMs(entry.avg_reaction_ms)} <span className="text-[10px] text-[var(--color-text-muted)] tracking-widest">AVG</span>
+                        <div className="font-mono font-bold text-sm mt-1" style={{ color: reactionColor(entry.avg_reaction_ms) }}>
+                          {formatMs(entry.avg_reaction_ms)} <span className="text-[10px] text-[var(--color-text-muted)]">AVG</span>
                         </div>
                       </div>
 
                       <div
-                        className={`w-full ${orderHeight} flex items-end justify-center pb-4 tracking-widest relative overflow-hidden`}
+                        className={`w-full ${orderHeight} flex items-end justify-center pb-4 relative overflow-hidden rounded-t-[var(--radius-md)]`}
                         style={{ 
-                          background: `linear-gradient(to top, ${bg}, transparent)`, 
+                          background: bg, 
                           borderTop: `2px solid ${color}`,
-                          boxShadow: `inset 0 20px 20px -20px ${color}, 0 -5px 15px -10px ${color}`,
-                          borderRadius: '2px'
                         }}
                         aria-label={`Rank ${entry.rank} — ${MEDAL_LABELS[idx]}`}
                       >
-                        <div className="absolute inset-0 opacity-20" style={{
-                          backgroundImage: `linear-gradient(transparent 1px, ${color} 1px)`,
-                          backgroundSize: '100% 4px',
-                        }} />
-                        <span className="font-heading font-bold text-2xl relative z-10 opacity-30" style={{ color }}>
+                        <span className="font-heading font-bold text-2xl relative z-10 opacity-20" style={{ color }}>
                           0{entry.rank}
                         </span>
                       </div>
@@ -182,7 +155,7 @@ export default function LeaderboardPage() {
             )}
 
             {/* Table Header */}
-            <div className="grid grid-cols-12 gap-3 px-5 py-3 mb-2 text-[10px] font-heading uppercase tracking-[0.2em] text-[var(--color-text-muted)] border-b border-[rgba(255,255,255,0.05)] sticky top-0 bg-[rgba(8,12,20,0.8)] backdrop-blur-md z-20"
+            <div className="grid grid-cols-12 gap-3 px-5 py-3 mb-2 text-xs font-heading font-medium text-[var(--color-text-muted)] border-b border-[var(--color-border-default)] sticky top-0 bg-[rgba(250,251,254,0.92)] backdrop-blur-md z-20"
                  role="row">
               <div className="col-span-1 hidden sm:block" role="columnheader">{t('leaderboard.col.rank')}</div>
               <div className="col-span-2 sm:col-span-1 block sm:hidden" role="columnheader">#</div>
@@ -198,24 +171,23 @@ export default function LeaderboardPage() {
                 <div
                   key={entry.user_id}
                   role="row"
-                  className="grid grid-cols-12 gap-3 items-center px-5 py-3.5 motion-safe:animate-fade-in-up transition-all hover:scale-[1.01] hover:bg-[rgba(255,255,255,0.03)] group"
+                  className="grid grid-cols-12 gap-3 items-center px-5 py-3.5 motion-safe:animate-fade-in-up transition-all hover:bg-[var(--color-bg-hover)] group rounded-[var(--radius-sm)]"
                   style={{ 
                     animationDelay: `${i * 0.04}s`,
-                    background: 'rgba(255,255,255,0.01)',
-                    border: '1px solid rgba(255,255,255,0.04)',
-                    borderRadius: '2px',
+                    background: 'var(--color-bg-card)',
+                    border: '1px solid var(--color-border-default)',
                   }}
                 >
-                  <div className="col-span-2 sm:col-span-1 font-heading font-bold text-sm text-[var(--color-text-secondary)] group-hover:text-white transition-colors" role="cell">
+                  <div className="col-span-2 sm:col-span-1 font-heading font-bold text-sm text-[var(--color-text-secondary)] group-hover:text-[var(--color-text-primary)] transition-colors" role="cell">
                     {entry.rank.toString().padStart(2, '0')}
                   </div>
                   
                   <div className="col-span-4 sm:col-span-3 flex items-center gap-3 overflow-hidden" role="cell">
-                    <div className="w-6 h-6 hidden sm:flex items-center justify-center shrink-0 text-[10px] font-heading font-bold"
-                         style={{ background: 'rgba(0,212,255,0.1)', color: '#00d4ff', border: '1px solid rgba(0,212,255,0.2)' }}>
+                    <div className="w-6 h-6 hidden sm:flex items-center justify-center shrink-0 text-[10px] font-heading font-bold rounded-full"
+                         style={{ background: 'rgba(79,70,229,0.08)', color: 'var(--color-primary)' }}>
                       {entry.username[0]?.toUpperCase()}
                     </div>
-                    <span className="font-heading font-bold text-sm uppercase tracking-wider truncate text-[var(--color-text-primary)]">
+                    <span className="font-heading font-bold text-sm tracking-tight truncate text-[var(--color-text-primary)]">
                       {entry.username}
                     </span>
                   </div>
@@ -245,12 +217,11 @@ export default function LeaderboardPage() {
                 <button
                   onClick={() => fetchPage(page - 1)}
                   disabled={page <= 1}
-                  className="px-4 py-2 font-heading font-bold text-sm uppercase tracking-wider border transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="px-4 py-2 font-heading font-bold text-sm border transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed rounded-[var(--radius-sm)]"
                   style={{
-                    borderColor: 'rgba(0,212,255,0.3)',
-                    color: '#00d4ff',
-                    background: 'rgba(0,212,255,0.05)',
-                    borderRadius: '3px',
+                    borderColor: 'var(--color-border-default)',
+                    color: 'var(--color-primary)',
+                    background: 'var(--color-bg-card)',
                   }}
                 >
                   {t('leaderboard.prev')}
@@ -261,12 +232,11 @@ export default function LeaderboardPage() {
                 <button
                   onClick={() => fetchPage(page + 1)}
                   disabled={page >= totalPages}
-                  className="px-4 py-2 font-heading font-bold text-sm uppercase tracking-wider border transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="px-4 py-2 font-heading font-bold text-sm border transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed rounded-[var(--radius-sm)]"
                   style={{
-                    borderColor: 'rgba(0,212,255,0.3)',
-                    color: '#00d4ff',
-                    background: 'rgba(0,212,255,0.05)',
-                    borderRadius: '3px',
+                    borderColor: 'var(--color-border-default)',
+                    color: 'var(--color-primary)',
+                    background: 'var(--color-bg-card)',
                   }}
                 >
                   {t('leaderboard.next')}
