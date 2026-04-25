@@ -139,6 +139,7 @@ export function useWebSocket(onAuthFailed?: () => void) {
   const reconnectTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const intentionalClose = useRef(false);
   const onAuthFailedRef = useRef(onAuthFailed);
+  // eslint-disable-next-line react-hooks/refs
   onAuthFailedRef.current = onAuthFailed;
 
   const connect = useCallback(() => {
@@ -212,6 +213,7 @@ export function useWebSocket(onAuthFailed?: () => void) {
         const delay = RECONNECT_BASE_DELAY_MS * Math.pow(1.5, reconnectAttempts.current - 1);
         console.log(`[WS] Reconnecting in ${Math.round(delay)}ms (attempt ${reconnectAttempts.current}/${MAX_RECONNECT_ATTEMPTS})...`);
         reconnectTimer.current = setTimeout(() => {
+          // eslint-disable-next-line
           connect();
         }, delay);
       }

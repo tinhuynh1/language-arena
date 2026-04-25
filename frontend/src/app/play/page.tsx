@@ -67,10 +67,6 @@ export default function PlayPage() {
   const [showJoinInput, setShowJoinInput] = useState(false);
   const [readySent, setReadySent] = useState(false);
 
-  if (!user) {
-    router.push('/login');
-    return null;
-  }
 
   const levels = selectedLang === 'en' ? EN_LEVELS : ZH_LEVELS;
 
@@ -136,6 +132,11 @@ export default function PlayPage() {
     duel: { color: '#0D9488', Icon: DuelIcon },
     battle: { color: '#EA580C', Icon: BattleIcon },
   };
+
+  if (!user) {
+    router.push('/login');
+    return null;
+  }
 
   // Idle - Mode/Lang/Level Selection
   if (game.state === 'idle') {
@@ -218,6 +219,7 @@ export default function PlayPage() {
                   }}
                 >
                   <div className="mb-2 flex justify-center">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={`https://flagcdn.com/w80/${flagCode}.png`}
                       alt={label}
@@ -536,11 +538,11 @@ export default function PlayPage() {
           mode={game.mode}
           lastReactionMs={game.lastReactionMs}
           lastIsCorrect={game.lastIsCorrect}
-          onHit={(target, _ms) => game.hitTarget(target.id)}
+          onHit={(target) => game.hitTarget(target.id)}
           claimedTargets={game.claimedTargets}
         />
         {game.mode === 'battle' && (
-          <LiveLeaderboard players={game.liveLeaderboard} round={game.round} />
+          <LiveLeaderboard players={game.liveLeaderboard} />
         )}
       </div>
     );

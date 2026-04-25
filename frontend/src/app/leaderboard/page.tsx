@@ -53,6 +53,7 @@ export default function LeaderboardPage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line
     fetchPage(1);
   }, [fetchPage]);
 

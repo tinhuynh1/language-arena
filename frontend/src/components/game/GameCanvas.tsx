@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import type { Target, QuizType } from '@/hooks/useWebSocket';
 import { useLocale } from '@/i18n/LocaleProvider';
 import type { TranslationKey } from '@/i18n';
@@ -33,16 +33,22 @@ const QUIZ_LABEL_KEYS: Record<QuizType, TranslationKey> = {
 
 /* Floating decorative dots */
 function FloatingDots() {
-  const dots = useMemo(() =>
-    Array.from({ length: 20 }, (_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      size: Math.random() * 4 + 2,
-      duration: Math.random() * 15 + 10,
-      delay: Math.random() * -20,
-      opacity: Math.random() * 0.15 + 0.03,
-    })), []);
+  const [dots, setDots] = useState<{id: number, x: number, y: number, size: number, duration: number, delay: number, opacity: number}[]>([]);
+
+  useEffect(() => {
+    // eslint-disable-next-line
+    setDots(
+      Array.from({ length: 20 }, (_, i) => ({
+        id: i,
+        x: Math.random() * 100,
+        y: Math.random() * 100,
+        size: Math.random() * 4 + 2,
+        duration: Math.random() * 15 + 10,
+        delay: Math.random() * -20,
+        opacity: Math.random() * 0.15 + 0.03,
+      }))
+    );
+  }, []);
 
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
@@ -78,7 +84,6 @@ export default function GameCanvas({
   opponent,
   mode,
   lastReactionMs,
-  lastIsCorrect,
   onHit,
   claimedTargets,
 }: GameCanvasProps) {
@@ -90,6 +95,7 @@ export default function GameCanvas({
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
+    // eslint-disable-next-line
     setHitTargets(new Set());
     setAnswered(false);
     setTimeLeft(timeMs);
@@ -130,10 +136,9 @@ export default function GameCanvas({
     });
 
     setTimeout(() => setShowPopup(null), 800);
-  }, [hitTargets, onHit, isTimeUp]);
+  }, [onHit, isTimeUp, answered]);
 
   const timePercent = (timeLeft / timeMs) * 100;
-  const timeColor = timePercent > 50 ? 'var(--color-secondary)' : timePercent > 25 ? 'var(--color-accent-gold)' : 'var(--color-accent-red)';
   const timeColorRaw = timePercent > 50 ? '#0D9488' : timePercent > 25 ? '#F59E0B' : '#DC2626';
   const timeSeconds = Math.ceil(timeLeft / 1000);
   const isUrgent = timePercent < 25;

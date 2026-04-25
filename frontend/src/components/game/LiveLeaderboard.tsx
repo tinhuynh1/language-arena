@@ -5,10 +5,9 @@ import { useLocale } from '@/i18n/LocaleProvider';
 
 interface LiveLeaderboardProps {
   players: LeaderboardPlayer[];
-  round: number;
 }
 
-export default function LiveLeaderboard({ players, round }: LiveLeaderboardProps) {
+export default function LiveLeaderboard({ players }: LiveLeaderboardProps) {
   const { t } = useLocale();
 
   if (!players || players.length === 0) return null;

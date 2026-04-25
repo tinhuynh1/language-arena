@@ -445,7 +445,7 @@ func (r *Room) HandleHit(client *Client, data TargetHitData) {
 	if isCorrect {
 		go func(userID, vocabID, quizType string) {
 			if r.Hub != nil && r.Hub.vocabService != nil {
-				r.Hub.vocabService.RecordCorrect(context.Background(), userID, vocabID, quizType)
+				_ = r.Hub.vocabService.RecordCorrect(context.Background(), userID, vocabID, quizType)
 			}
 		}(client.ID.String(), correctVocab.ID.String(), string(r.QuizType))
 
@@ -461,7 +461,7 @@ func (r *Room) HandleHit(client *Client, data TargetHitData) {
 	} else {
 		go func(userID, vocabID, quizType string) {
 			if r.Hub != nil && r.Hub.vocabService != nil {
-				r.Hub.vocabService.RecordMistake(context.Background(), userID, vocabID, quizType)
+				_ = r.Hub.vocabService.RecordMistake(context.Background(), userID, vocabID, quizType)
 			}
 		}(client.ID.String(), correctVocab.ID.String(), string(r.QuizType))
 

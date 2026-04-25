@@ -165,7 +165,9 @@ func (r *VocabRepository) GetTargetedSet(ctx context.Context, userID, language, 
 		r.log.Error("failed to get mistakes", "err", err)
 		return nil, err
 	}
-	defer rows1.Close()
+	defer func() {
+		_ = rows1.Close()
+	}()
 
 	mistakeVocabs := make([]model.Vocabulary, 0)
 	mistakeIDs := make(map[string]bool)

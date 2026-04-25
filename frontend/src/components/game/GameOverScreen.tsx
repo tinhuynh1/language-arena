@@ -1,6 +1,6 @@
 'use client';
 
-import type { GameOverData, LeaderboardPlayer } from '@/hooks/useWebSocket';
+import type { GameOverData } from '@/hooks/useWebSocket';
 import { useLocale } from '@/i18n/LocaleProvider';
 
 interface GameOverScreenProps {

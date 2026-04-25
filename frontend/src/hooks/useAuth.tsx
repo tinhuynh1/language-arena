@@ -26,6 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const payload = JSON.parse(atob(savedToken.split('.')[1]));
         if (payload.exp && payload.exp * 1000 > Date.now()) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect
           setToken(savedToken);
           setUser(JSON.parse(savedUser));
         } else {
