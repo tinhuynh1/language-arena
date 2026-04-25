@@ -23,24 +23,8 @@ func (m *mockVocabReader) FindByLanguage(ctx context.Context, q model.VocabQuery
 }
 
 func (m *mockVocabReader) GetRandomSet(ctx context.Context, language, level string, count int) ([]model.Vocabulary, error) {
-	if m.getRandomSetFn != nil {
-		return m.getRandomSetFn(ctx, language, level, count)
-	}
-	return nil, nil
+	return m.getRandomSetFn(ctx, language, level, count)
 }
-
-func (m *mockVocabReader) GetTargetedSet(ctx context.Context, userID, language, level, quizType string, count int) ([]model.Vocabulary, error) {
-	return nil, nil
-}
-
-func (m *mockVocabReader) RecordMistake(ctx context.Context, userID, vocabID, quizType string) error {
-	return nil
-}
-
-func (m *mockVocabReader) RecordCorrect(ctx context.Context, userID, vocabID, quizType string) error {
-	return nil
-}
-
 
 // ── GetByLanguage Tests ────────────────────────────────
 

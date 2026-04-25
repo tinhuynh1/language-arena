@@ -26,8 +26,9 @@ export default function GameOverScreen({ data, mode, username, onPlayAgain, onLe
   }
 
   const isWinner = data.winner === username || (mode === 'solo');
-  const reactionColor = data.stats.avg_reaction_ms < 1000 ? 'var(--color-secondary)' : data.stats.avg_reaction_ms < 2000 ? 'var(--color-accent-gold)' : 'var(--color-accent-red)';
+  const reactionColor = data.stats.avg_reaction_ms < 1000 ? '#00ff88' : data.stats.avg_reaction_ms < 2000 ? '#ffd700' : '#ff3548';
 
+  // Find player rank in battle mode
   let myRank = 0;
   if (mode === 'battle' && data.ranking) {
     const entry = data.ranking.find(p => p.username === username);
@@ -49,21 +50,21 @@ export default function GameOverScreen({ data, mode, username, onPlayAgain, onLe
   };
 
   const titleColor = () => {
-    if (mode === 'solo') return 'var(--color-primary)';
+    if (mode === 'solo') return '#00ff88';
     if (mode === 'battle') {
-      if (myRank === 1) return '#F59E0B';
-      if (myRank === 2) return '#94A3B8';
-      if (myRank === 3) return '#EA580C';
-      return 'var(--color-accent)';
+      if (myRank === 1) return '#ffd700';
+      if (myRank === 2) return '#c0c0c0';
+      if (myRank === 3) return '#cd7f32';
+      return '#00d4ff';
     }
-    return isWinner ? 'var(--color-secondary)' : 'var(--color-accent-red)';
+    return isWinner ? '#00ff88' : '#ff3548';
   };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[500px] gap-8 px-4 py-12">
       {/* Title */}
       <div className="text-center">
-        <div className="text-5xl sm:text-6xl font-heading font-bold mb-2"
+        <div className="text-6xl font-heading font-bold text-glow mb-2"
              style={{ color: titleColor() }}>
           {titleText()}
         </div>
@@ -76,15 +77,15 @@ export default function GameOverScreen({ data, mode, username, onPlayAgain, onLe
       {/* Correct Answers */}
       <div className="flex items-center gap-12">
         <div className="text-center">
-          <div className="text-sm text-[var(--color-text-muted)] font-heading mb-1">{t('gameover.correct')}</div>
-          <div className="text-5xl font-heading font-bold text-[var(--color-primary)]">{data.your_correct}</div>
+          <div className="text-sm text-[var(--color-text-muted)] font-heading uppercase tracking-wider mb-1">{t('gameover.correct')}</div>
+          <div className="text-5xl font-heading font-bold" style={{ color: '#00ff88' }}>{data.your_correct}</div>
         </div>
         {mode === 'duel' && (
           <>
             <div className="text-3xl font-heading text-[var(--color-text-muted)]">VS</div>
             <div className="text-center">
-              <div className="text-sm text-[var(--color-text-muted)] font-heading mb-1">{t('gameover.opponent')}</div>
-              <div className="text-5xl font-heading font-bold text-[var(--color-secondary)]">{data.opponent_correct}</div>
+              <div className="text-sm text-[var(--color-text-muted)] font-heading uppercase tracking-wider mb-1">{t('gameover.opponent')}</div>
+              <div className="text-5xl font-heading font-bold" style={{ color: '#ff6b35' }}>{data.opponent_correct}</div>
             </div>
           </>
         )}
@@ -93,17 +94,17 @@ export default function GameOverScreen({ data, mode, username, onPlayAgain, onLe
       {/* Stats */}
       <div className="grid grid-cols-3 gap-6 w-full max-w-md">
         <div className="card text-center">
-          <div className="text-xs text-[var(--color-text-muted)] font-heading mb-1">{t('gameover.rounds')}</div>
+          <div className="text-xs text-[var(--color-text-muted)] font-heading uppercase tracking-wider mb-1">{t('gameover.rounds')}</div>
           <div className="text-2xl font-heading font-bold">{data.stats.total_rounds}</div>
         </div>
         <div className="card text-center">
-          <div className="text-xs text-[var(--color-text-muted)] font-heading mb-1">{t('gameover.avgReaction')}</div>
+          <div className="text-xs text-[var(--color-text-muted)] font-heading uppercase tracking-wider mb-1">{t('gameover.avgReaction')}</div>
           <div className="text-2xl font-heading font-bold font-mono" style={{ color: reactionColor }}>
             {data.stats.avg_reaction_ms}ms
           </div>
         </div>
         <div className="card text-center">
-          <div className="text-xs text-[var(--color-text-muted)] font-heading mb-1">{t('gameover.accuracy')}</div>
+          <div className="text-xs text-[var(--color-text-muted)] font-heading uppercase tracking-wider mb-1">{t('gameover.accuracy')}</div>
           <div className="text-2xl font-heading font-bold">{data.stats.accuracy}%</div>
         </div>
       </div>
@@ -111,33 +112,33 @@ export default function GameOverScreen({ data, mode, username, onPlayAgain, onLe
       {/* Battle Ranking */}
       {mode === 'battle' && data.ranking && data.ranking.length > 0 && (
         <div className="w-full max-w-md">
-          <div className="text-xs font-heading text-[var(--color-text-muted)] mb-3 text-center">
+          <div className="text-xs font-heading uppercase tracking-widest text-[var(--color-text-muted)] mb-3 text-center">
             {t('gameover.finalRanking')}
           </div>
           <div className="space-y-1">
             {data.ranking.map((p) => {
-              const rankColor = p.rank === 1 ? '#F59E0B' : p.rank === 2 ? '#94A3B8' : p.rank === 3 ? '#EA580C' : 'var(--color-text-muted)';
+              const rankColor = p.rank === 1 ? '#ffd700' : p.rank === 2 ? '#c0c0c0' : p.rank === 3 ? '#cd7f32' : 'var(--color-text-muted)';
               const isMe = p.username === username;
               return (
                 <div
                   key={p.username}
-                  className="flex items-center justify-between px-4 py-3 rounded-[var(--radius-sm)]"
+                  className="flex items-center justify-between px-4 py-3"
                   style={{
-                    background: isMe ? 'rgba(79, 70, 229, 0.06)' : 'var(--color-bg-card)',
-                    borderLeft: isMe ? '3px solid var(--color-primary)' : '3px solid transparent',
-                    border: isMe ? undefined : '1px solid var(--color-border-default)',
+                    background: isMe ? 'rgba(0, 255, 136, 0.1)' : 'var(--color-bg-card)',
+                    borderLeft: isMe ? '3px solid #00ff88' : '3px solid transparent',
+                    borderRadius: '2px',
                   }}
                 >
                   <div className="flex items-center gap-3">
                     <span className="font-mono font-bold text-lg w-8" style={{ color: rankColor }}>#{p.rank}</span>
-                    <span className="font-heading font-bold" style={{ color: isMe ? 'var(--color-primary)' : 'var(--color-text-primary)' }}>
+                    <span className="font-heading font-bold" style={{ color: isMe ? '#00ff88' : 'var(--color-text-primary)' }}>
                       {p.username} {isMe && t('gameover.you')}
                     </span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="font-mono font-bold text-lg text-[var(--color-primary)]">{p.correct_count}</span>
+                    <span className="font-mono font-bold text-lg" style={{ color: '#00ff88' }}>{p.correct_count}</span>
                     {p.avg_reaction_ms > 0 && (
-                      <span className="font-mono text-sm text-[var(--color-text-muted)]">{p.avg_reaction_ms}ms</span>
+                      <span className="font-mono text-sm" style={{ color: 'var(--color-text-muted)' }}>{p.avg_reaction_ms}ms</span>
                     )}
                   </div>
                 </div>

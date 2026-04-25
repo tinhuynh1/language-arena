@@ -6,7 +6,6 @@ type Vocabulary struct {
 	ID         uuid.UUID `json:"id" db:"id"`
 	Word       string    `json:"word" db:"word"`
 	Meaning    string    `json:"meaning" db:"meaning"`
-	Definition string    `json:"definition" db:"definition"`
 	Language   string    `json:"language" db:"language"`
 	Level      string    `json:"level" db:"level"`
 	Difficulty int       `json:"difficulty" db:"difficulty"`

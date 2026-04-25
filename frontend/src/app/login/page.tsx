@@ -48,22 +48,30 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center px-6 overflow-hidden bg-[var(--color-bg-secondary)]">
-      {/* Soft blobs */}
-      <div className="bg-blob w-[400px] h-[400px] opacity-[0.1]"
-           style={{ background: '#4F46E5', top: '-15%', left: '-10%' }} />
-      <div className="bg-blob w-[350px] h-[350px] opacity-[0.07]"
-           style={{ background: '#0D9488', bottom: '-10%', right: '-10%', animationDelay: '-5s' }} />
+    <div className="relative min-h-screen flex items-center justify-center px-6 overflow-hidden">
+      {/* Ambient orbs */}
+      <div className="orb w-[500px] h-[500px] opacity-[0.06] animate-float"
+           style={{ background: '#00ff88', top: '-20%', left: '-15%' }} />
+      <div className="orb w-[400px] h-[400px] opacity-[0.05] animate-float"
+           style={{ background: '#00d4ff', bottom: '-15%', right: '-10%', animationDelay: '-5s' }} />
+
+      {/* Grid */}
+      <div className="absolute inset-0 opacity-[0.02]" aria-hidden="true" style={{
+        backgroundImage: `linear-gradient(rgba(0,255,136,0.4) 1px, transparent 1px),
+                          linear-gradient(90deg, rgba(0,255,136,0.4) 1px, transparent 1px)`,
+        backgroundSize: '60px 60px',
+      }} />
 
       <div className="relative z-10 w-full max-w-sm animate-fade-in-up">
         {/* Logo */}
         <div className="text-center mb-10">
           <Link href="/" aria-label="Go to homepage">
-            <div className="inline-block font-heading font-bold text-2xl tracking-tight mb-5 hover:opacity-80 transition-opacity">
-              <span className="text-gradient-primary">LinguaLeap</span>
+            <div className="inline-block font-heading font-bold text-3xl tracking-wider mb-5 hover:opacity-80 transition-opacity">
+              <span className="text-gradient-neon text-glow">LINGO</span>
+              <span className="text-[var(--color-text-primary)]"> SNIPER</span>
             </div>
           </Link>
-          <h1 className="font-heading font-bold text-2xl tracking-tight">
+          <h1 className="font-heading font-bold text-2xl uppercase tracking-wider">
             {isRegister ? t('login.title.register') : t('login.title.login')}
           </h1>
           <p className="text-sm text-[var(--color-text-muted)] mt-2">
@@ -75,7 +83,7 @@ export default function LoginPage() {
         <form onSubmit={handleSubmit} className="card space-y-5">
           {isRegister && (
             <div>
-              <label htmlFor="username" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+              <label htmlFor="username" className="block text-xs font-heading uppercase tracking-wider text-[var(--color-text-muted)] mb-2">
                 {t('login.label.username')}
               </label>
               <input
@@ -84,7 +92,7 @@ export default function LoginPage() {
                 type="text"
                 autoComplete="username"
                 className="input-field"
-                placeholder="Your name"
+                placeholder="SniperElite"
                 value={username}
                 onChange={e => setUsername(e.target.value)}
                 required
@@ -94,7 +102,7 @@ export default function LoginPage() {
           )}
 
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+            <label htmlFor="email" className="block text-xs font-heading uppercase tracking-wider text-[var(--color-text-muted)] mb-2">
               {t('login.label.email')}
             </label>
             <input
@@ -103,7 +111,7 @@ export default function LoginPage() {
               type="email"
               autoComplete="email"
               className="input-field"
-              placeholder="you@example.com"
+              placeholder="you@arena.com"
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
@@ -111,7 +119,7 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+            <label htmlFor="password" className="block text-xs font-heading uppercase tracking-wider text-[var(--color-text-muted)] mb-2">
               {t('login.label.password')}
             </label>
             <input
@@ -131,7 +139,8 @@ export default function LoginPage() {
           {error && (
             <div
               role="alert"
-              className="text-sm text-[var(--color-accent-red)] bg-red-50 border border-red-200 px-4 py-3 rounded-[var(--radius-sm)]"
+              className="text-sm text-[var(--color-accent-red)] bg-[rgba(255,53,72,0.08)] border border-[rgba(255,53,72,0.25)] px-4 py-3"
+              style={{ borderRadius: '3px' }}
             >
               {error}
             </div>
@@ -156,7 +165,7 @@ export default function LoginPage() {
           {isRegister ? t('login.toggle.hasAccount') : t('login.toggle.noAccount')}{' '}
           <button
             onClick={switchMode}
-            className="font-heading font-medium text-[var(--color-primary)] hover:underline focus-visible:underline cursor-pointer"
+            className="font-heading uppercase tracking-wider text-[var(--color-accent-neon)] hover:underline focus-visible:underline"
           >
             {isRegister ? t('login.toggle.signin') : t('login.toggle.register')}
           </button>
