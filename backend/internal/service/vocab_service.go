@@ -11,6 +11,9 @@ import (
 type VocabReader interface {
 	FindByLanguage(ctx context.Context, q model.VocabQuery) ([]model.Vocabulary, error)
 	GetRandomSet(ctx context.Context, language, level string, count int) ([]model.Vocabulary, error)
+	GetTargetedSet(ctx context.Context, userID, language, level, quizType string, count int) ([]model.Vocabulary, error)
+	RecordMistake(ctx context.Context, userID, vocabID, quizType string) error
+	RecordCorrect(ctx context.Context, userID, vocabID, quizType string) error
 }
 
 type VocabService struct {
@@ -53,4 +56,27 @@ func (s *VocabService) GetRandomSet(ctx context.Context, language, level string,
 
 	s.log.Debug("random vocabs fetched", "op", "GetRandomSet", "language", language, "level", level, "count", len(vocabs))
 	return vocabs, nil
+}
+
+func (s *VocabService) GetTargetedSet(ctx context.Context, userID, language, level, quizType string, count int) ([]model.Vocabulary, error) {
+	if count <= 0 || count > 50 {
+		count = 10
+	}
+
+	vocabs, err := s.vocabReader.GetTargetedSet(ctx, userID, language, level, quizType, count)
+	if err != nil {
+		s.log.Error("get targeted vocab set failed", "op", "GetTargetedSet", "userID", userID, "language", language, "level", level, "quizType", quizType, "count", count, "err", err)
+		return nil, err
+	}
+
+	s.log.Debug("targeted vocabs fetched", "op", "GetTargetedSet", "userID", userID, "language", language, "level", level, "quizType", quizType, "count", len(vocabs))
+	return vocabs, nil
+}
+
+func (s *VocabService) RecordMistake(ctx context.Context, userID, vocabID, quizType string) error {
+	return s.vocabReader.RecordMistake(ctx, userID, vocabID, quizType)
+}
+
+func (s *VocabService) RecordCorrect(ctx context.Context, userID, vocabID, quizType string) error {
+	return s.vocabReader.RecordCorrect(ctx, userID, vocabID, quizType)
 }

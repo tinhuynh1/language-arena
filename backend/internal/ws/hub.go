@@ -279,7 +279,7 @@ func (h *Hub) handleJoinQueue(client *Client, msg WSMessage) {
 	}
 
 	if data.Mode == "solo" {
-		vocabs := h.GetVocabs(data.Language, data.Level, maxRounds+numTargets)
+		vocabs := h.GetVocabs(client.ID.String(), data.Language, data.Level, data.QuizType, maxRounds+numTargets)
 		room := NewRoom(data.Language, data.Level, model.ModeSolo, model.QuizType(data.QuizType), vocabs, h)
 		room.AddPlayer(client)
 		h.AddRoom(room)
@@ -314,7 +314,7 @@ func (h *Hub) handleCreateRoom(client *Client, msg WSMessage) {
 		data.Level = "A1"
 	}
 
-	vocabs := h.GetVocabs(data.Language, data.Level, maxRounds+numTargets)
+	vocabs := h.GetVocabs(client.ID.String(), data.Language, data.Level, data.QuizType, maxRounds+numTargets)
 	room := NewRoom(data.Language, data.Level, model.ModeBattle, model.QuizType(data.QuizType), vocabs, h)
 	room.HostID = client.ID
 	room.AddPlayer(client)
@@ -810,7 +810,7 @@ func (h *Hub) RemoveRoom(room *Room) {
 	}
 }
 
-func (h *Hub) GetVocabs(language, level string, count int) []model.Vocabulary {
+func (h *Hub) GetVocabs(userID, language, level, quizType string, count int) []model.Vocabulary {
 	if h.vocabService == nil {
 		h.log.Warn("vocabService is nil, using fallback", "language", language, "level", level)
 		return []model.Vocabulary{
@@ -819,7 +819,7 @@ func (h *Hub) GetVocabs(language, level string, count int) []model.Vocabulary {
 		}
 	}
 
-	vocabs, err := h.vocabService.GetRandomSet(context.Background(), language, level, count)
+	vocabs, err := h.vocabService.GetTargetedSet(context.Background(), userID, language, level, quizType, count)
 	if err != nil || len(vocabs) == 0 {
 		h.log.Error("failed to get vocabs, using fallback", "err", err, "language", language, "level", level)
 		return []model.Vocabulary{

@@ -61,7 +61,7 @@ func (m *Matchmaker) enqueueRedis(client *Client, language, level string, quizTy
 	}
 
 	// Match found: create room owned by this instance
-	vocabs := m.hub.GetVocabs(language, level, maxRounds+numTargets)
+	vocabs := m.hub.GetVocabs(client.ID.String(), language, level, string(quizType), maxRounds+numTargets)
 	room := NewRoom(language, level, mode, quizType, vocabs, m.hub)
 	room.AddPlayer(client)
 	m.hub.AddRoom(room)
@@ -147,7 +147,7 @@ func (m *Matchmaker) enqueueLocal(client *Client, language, level string, quizTy
 
 			m.queue = append(m.queue[:i], m.queue[i+1:]...)
 
-			vocabs := m.hub.GetVocabs(language, level, maxRounds+numTargets)
+			vocabs := m.hub.GetVocabs(client.ID.String(), language, level, string(quizType), maxRounds+numTargets)
 
 			room := NewRoom(language, level, mode, quizType, vocabs, m.hub)
 			room.AddPlayer(opponent)
