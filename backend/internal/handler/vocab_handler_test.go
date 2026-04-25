@@ -31,18 +31,6 @@ func (m *mockVocabReaderHandler) GetRandomSet(ctx context.Context, language, lev
 	return nil, nil
 }
 
-func (m *mockVocabReaderHandler) GetTargetedSet(ctx context.Context, userID, language, level, quizType string, count int) ([]model.Vocabulary, error) {
-	return nil, nil
-}
-
-func (m *mockVocabReaderHandler) RecordMistake(ctx context.Context, userID, vocabID, quizType string) error {
-	return nil
-}
-
-func (m *mockVocabReaderHandler) RecordCorrect(ctx context.Context, userID, vocabID, quizType string) error {
-	return nil
-}
-
 // ── GetVocabularies Tests ──────────────────────────────
 
 func TestGetVocabularies_Success(t *testing.T) {

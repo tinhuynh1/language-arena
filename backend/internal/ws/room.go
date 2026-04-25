@@ -1,7 +1,6 @@
 package ws
 
 import (
-	"context"
 	"log/slog"
 	"math/rand"
 	"sort"
@@ -11,7 +10,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/michael/language-arena/backend/internal/model"
-	"github.com/michael/language-arena/backend/pkg/pinyin"
 )
 
 const (
@@ -271,15 +269,8 @@ func (r *Room) getQuestion(v model.Vocabulary) string {
 	switch r.QuizType {
 	case model.QuizTypeMeaningToWord:
 		return v.Meaning
-	case model.QuizTypeDefinitionToWord:
-		if v.Definition != "" {
-			return v.Definition
-		}
-		return v.Meaning
 	case model.QuizTypeWordToMeaning, model.QuizTypeWordToIPA, model.QuizTypeWordToPinyin:
 		return v.Word
-	case model.QuizTypeWordToTone:
-		return v.Word + " (" + v.Meaning + ")"
 	default:
 		return v.Meaning
 	}
@@ -299,22 +290,12 @@ func (r *Room) getLabel(v model.Vocabulary) string {
 			return v.Pinyin
 		}
 		return v.Word
-	case model.QuizTypeWordToTone:
-		if v.Pinyin != "" {
-			return v.Pinyin
-		}
-		return v.Word
 	default:
 		return v.Word
 	}
 }
 
 func (r *Room) generateTargets(correct model.Vocabulary) []Target {
-	// For tone quiz: generate targets from pinyin tone variants
-	if r.QuizType == model.QuizTypeWordToTone && correct.Pinyin != "" {
-		return r.generateToneTargets(correct)
-	}
-
 	targets := make([]Target, 0, numTargets)
 
 	positions := generateSpreadPositions(numTargets)
@@ -351,37 +332,6 @@ func (r *Room) generateTargets(correct model.Vocabulary) []Target {
 				break
 			}
 		}
-	}
-
-	rand.Shuffle(len(targets), func(i, j int) {
-		targets[i], targets[j] = targets[j], targets[i]
-	})
-
-	return targets
-}
-
-// generateToneTargets creates 4 targets with tone variants of the correct vocab's pinyin.
-func (r *Room) generateToneTargets(correct model.Vocabulary) []Target {
-	variants := pinyin.GenerateToneVariants(correct.Pinyin)
-	positions := generateSpreadPositions(len(variants))
-
-	targets := make([]Target, 0, len(variants))
-	for i, variant := range variants {
-		isCorrect := variant == correct.Pinyin
-		targetID := correct.ID.String()[:8]
-		if !isCorrect {
-			// Generate a unique ID for wrong targets
-			targetID = uuid.New().String()[:8]
-		}
-		targets = append(targets, Target{
-			ID:      targetID,
-			Word:    correct.Word,
-			Meaning: correct.Meaning,
-			Label:   variant,
-			X:       positions[i][0],
-			Y:       positions[i][1],
-			Correct: isCorrect,
-		})
 	}
 
 	rand.Shuffle(len(targets), func(i, j int) {
@@ -443,12 +393,6 @@ func (r *Room) HandleHit(client *Client, data TargetHitData) {
 	ps.Answered = true
 
 	if isCorrect {
-		go func(userID, vocabID, quizType string) {
-			if r.Hub != nil && r.Hub.vocabService != nil {
-				r.Hub.vocabService.RecordCorrect(context.Background(), userID, vocabID, quizType)
-			}
-		}(client.ID.String(), correctVocab.ID.String(), string(r.QuizType))
-
 		ps.CorrectCount++
 		ps.Reactions = append(ps.Reactions, data.ReactionMs)
 		ps.AllReactions = append(ps.AllReactions, data.ReactionMs)
@@ -459,12 +403,6 @@ func (r *Room) HandleHit(client *Client, data TargetHitData) {
 			"correct_count", ps.CorrectCount,
 		)
 	} else {
-		go func(userID, vocabID, quizType string) {
-			if r.Hub != nil && r.Hub.vocabService != nil {
-				r.Hub.vocabService.RecordMistake(context.Background(), userID, vocabID, quizType)
-			}
-		}(client.ID.String(), correctVocab.ID.String(), string(r.QuizType))
-
 		// Penalty: count wrong answer as max reaction time
 		ps.AllReactions = append(ps.AllReactions, roundTimeMs)
 		r.log.Info("wrong hit",
